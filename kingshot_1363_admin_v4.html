@@ -485,7 +485,7 @@ const FORTRESSES = [
  * Each feature carries: id, cat, k, lv, x, y, n (name for special), alliance (null = unowned).
  */
 const allFeatures = [
-  ...RAW.map((o,i)  => ({ ...o, id:'op'+i,   cat:'outpost',   alliance:null, n: TYPES[o.k].name+' Lv.'+o.lv })),
+  ...RAW.map((o,i)  => ({ ...o, id:'op'+i,   cat:'outpost',   alliance:o.owner ?? null, n: TYPES[o.k].name+' Lv.'+o.lv })),
   ...SANCTUARIES.map((s,i) => ({ ...s, id:'san'+i,  cat:'sanctuary', alliance:null, k:'sanctuary', lv:null })),
   ...FORTRESSES.map((f,i)  => ({ ...f, id:'fort'+i, cat:'fortress',  alliance:null, k:'fortress',  lv:null })),
   // King's Castle — centre of the map at X600, Y600
