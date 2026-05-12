@@ -78,7 +78,9 @@ body {
 }
 .toggle-sidebar-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 .sidebar-hidden .sidebar { display: none !important; }
-.sidebar-hidden .layout { grid-template-columns: 1fr !important; }
+.sidebar-hidden .content { display: block !important; }
+.sidebar-hidden .content > .map-pane { width: 100% !important; flex: 1 1 100% !important; }
+.sidebar-hidden .content > .table-pane { display: none !important; }
 
 /* ═══════════════════════════════════════════
    MAIN LAYOUT — sidebar + content column
@@ -1914,10 +1916,25 @@ async function init() {
   initContextMenu();
 
   // ── Sidebar toggle ──
+let sidebarWasInSplit = false;
 document.getElementById('toggleSidebar').addEventListener('click', () => {
-  document.querySelector('.layout').classList.toggle('sidebar-hidden');
+  const layout = document.querySelector('.layout');
+  const sidebar = document.querySelector('.sidebar');
+  const isHidden = layout.classList.toggle('sidebar-hidden');
   const btn = document.getElementById('toggleSidebar');
-  btn.textContent = document.querySelector('.layout').classList.contains('sidebar-hidden') ? '▶' : '◀';
+  btn.textContent = isHidden ? '▶' : '◀';
+  if (isHidden) {
+    // Save current view mode, switch to map-only
+    sidebarWasInSplit = viewMode === 'split';
+    setViewMode('map');
+  } else {
+    // Restore: if table was visible before, go back to split
+    if (sidebarWasInSplit) {
+      setViewMode('split');
+    } else {
+      setViewMode('map');
+    }
+  }
 });
 
 // ── View mode buttons ──
