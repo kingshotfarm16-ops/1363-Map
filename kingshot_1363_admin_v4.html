@@ -67,6 +67,14 @@ body {
   opacity: 0; transition: opacity 0.4s;
 }
 .saved-badge.show { opacity: 1; background: #1a3a20; color: var(--green); border: 1px solid #2d5a30; }
+.toggle-sidebar-btn {
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 14px;
+  padding: 3px 8px; border-radius: 4px; margin-left: 8px; transition: all 0.15s;
+}
+.toggle-sidebar-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.sidebar-hidden .sidebar { display: none !important; }
+.sidebar-hidden .main { grid-template-columns: 1fr; }
 
 /* ═══════════════════════════════════════════
    MAIN LAYOUT — sidebar + content column
@@ -232,7 +240,7 @@ body {
 <div class="header">
   <span class="header-crown">♛</span>
   <span class="header-title">Server 1363 — Admin</span>
-  <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span>
+  <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span><button class="toggle-sidebar-btn" id="toggleSidebar" title="Toggle sidebar">◀</button>
   <span class="saved-badge" id="savedBadge">✓ Saved</span>
 </div>
 
@@ -365,40 +373,80 @@ const OUTPOST_TYPE_KEYS = Object.keys(TYPES);
  * x,y — game coordinates (range ~87–1137)
  */
 const RAW = [
-  // Builder's Guild — Lv.1 (border ring) and Lv.3 (mid ring)
-  {k:'construction',lv:1,x:1068,y:138},{k:'construction',lv:1,x:537,y:138},{k:'construction',lv:1,x:138,y:138},
-  {k:'construction',lv:1,x:138,y:666},{k:'construction',lv:1,x:138,y:1038},{k:'construction',lv:1,x:666,y:1068},
-  {k:'construction',lv:1,x:1068,y:567},{k:'construction',lv:1,x:1068,y:1068},
-  {k:'construction',lv:3,x:486,y:327},{k:'construction',lv:3,x:768,y:867},{k:'construction',lv:3,x:867,y:567},{k:'construction',lv:3,x:327,y:666},
-  // Scholar's Tower — Lv.1 and Lv.3
-  {k:'research',lv:1,x:957,y:237},{k:'research',lv:1,x:666,y:267},{k:'research',lv:1,x:237,y:237},
-  {k:'research',lv:1,x:267,y:537},{k:'research',lv:1,x:237,y:957},{k:'research',lv:1,x:537,y:936},
-  {k:'research',lv:1,x:936,y:537},{k:'research',lv:1,x:957,y:957},
-  {k:'research',lv:3,x:867,y:327},{k:'research',lv:3,x:327,y:327},{k:'research',lv:3,x:327,y:867},{k:'research',lv:3,x:867,y:867},
-  // Drill Camp — Lv.2
-  {k:'training',lv:2,x:237,y:486},{k:'training',lv:2,x:138,y:747},{k:'training',lv:2,x:486,y:957},
-  {k:'training',lv:2,x:768,y:1038},{k:'training',lv:2,x:957,y:747},{k:'training',lv:2,x:1068,y:486},
-  {k:'training',lv:2,x:486,y:138},{k:'training',lv:2,x:768,y:237},
-  // Harvest Altar — Lv.1
-  {k:'production',lv:1,x:1068,y:237},{k:'production',lv:1,x:768,y:138},{k:'production',lv:1,x:237,y:138},
-  {k:'production',lv:1,x:138,y:327},{k:'production',lv:1,x:138,y:957},{k:'production',lv:1,x:327,y:1038},
-  {k:'production',lv:1,x:1068,y:747},{k:'production',lv:1,x:957,y:1068},
-  // Forager Grove — Lv.1 (edge nodes)
-  {k:'gathering',lv:1,x:957,y:138},{k:'gathering',lv:1,x:537,y:87},{k:'gathering',lv:1,x:138,y:237},
-  {k:'gathering',lv:1,x:87,y:666},{k:'gathering',lv:1,x:267,y:1068},{k:'gathering',lv:1,x:636,y:1137},
-  {k:'gathering',lv:1,x:1137,y:567},{k:'gathering',lv:1,x:1068,y:936},
-  // Frontier Lodge — Lv.3
-  {k:'frontier',lv:3,x:768,y:327},{k:'frontier',lv:3,x:327,y:567},{k:'frontier',lv:3,x:486,y:867},{k:'frontier',lv:3,x:867,y:666},
-  // Arsenal — Lv.2 and Lv.4
-  {k:'attack',lv:2,x:867,y:138},{k:'attack',lv:2,x:366,y:138},{k:'attack',lv:2,x:138,y:438},
-  {k:'attack',lv:2,x:138,y:867},{k:'attack',lv:2,x:438,y:1068},{k:'attack',lv:2,x:1068,y:327},
-  {k:'attack',lv:2,x:1068,y:867},{k:'attack',lv:2,x:867,y:1068},
-  {k:'attack',lv:4,x:588,y:867},{k:'attack',lv:4,x:387,y:486},{k:'attack',lv:4,x:816,y:486},
-  // Armory — Lv.2 and Lv.4
-  {k:'defense',lv:2,x:537,y:1038},{k:'defense',lv:2,x:237,y:768},{k:'defense',lv:2,x:138,y:537},
-  {k:'defense',lv:2,x:438,y:267},{k:'defense',lv:2,x:666,y:138},{k:'defense',lv:2,x:957,y:438},
-  {k:'defense',lv:2,x:1068,y:666},{k:'defense',lv:2,x:738,y:957},
-  {k:'defense',lv:4,x:816,y:717},{k:'defense',lv:4,x:588,y:327},{k:'defense',lv:4,x:387,y:717},
+  {k:'construction',lv:1,x:1068,y:138,owner:9},
+  {k:'construction',lv:1,x:537,y:138,owner:6},
+  {k:'construction',lv:1,x:138,y:138,owner:4},
+  {k:'construction',lv:1,x:138,y:666,owner:3},
+  {k:'construction',lv:1,x:138,y:1038,owner:10},
+  {k:'construction',lv:1,x:666,y:1068,owner:0},
+  {k:'construction',lv:1,x:1068,y:567,owner:1},
+  {k:'construction',lv:1,x:1068,y:1068,owner:3},
+  {k:'construction',lv:3,x:486,y:327,owner:2},
+  {k:'construction',lv:3,x:768,y:867,owner:3},
+  {k:'construction',lv:3,x:867,y:567,owner:1},
+  {k:'construction',lv:3,x:327,y:666,owner:4},
+  {k:'research',lv:1,x:957,y:237,owner:7},
+  {k:'research',lv:1,x:666,y:267,owner:8},
+  {k:'research',lv:1,x:237,y:237,owner:4},
+  {k:'research',lv:1,x:267,y:537,owner:2},
+  {k:'research',lv:1,x:237,y:957,owner:12},
+  {k:'research',lv:1,x:537,y:936},
+  {k:'research',lv:1,x:936,y:537,owner:1},
+  {k:'research',lv:1,x:957,y:957,owner:3},
+  {k:'research',lv:3,x:867,y:327,owner:1},
+  {k:'research',lv:3,x:327,y:327,owner:4},
+  {k:'research',lv:3,x:327,y:867,owner:0},
+  {k:'research',lv:3,x:867,y:867,owner:3},
+  {k:'training',lv:2,x:237,y:486,owner:4},
+  {k:'training',lv:2,x:138,y:747,owner:3},
+  {k:'training',lv:2,x:486,y:957,owner:0},
+  {k:'training',lv:2,x:768,y:1038,owner:5},
+  {k:'training',lv:2,x:957,y:747,owner:1},
+  {k:'training',lv:2,x:1068,y:486,owner:8},
+  {k:'training',lv:2,x:486,y:138,owner:6},
+  {k:'training',lv:2,x:768,y:237,owner:7},
+  {k:'production',lv:1,x:1068,y:237,owner:7},
+  {k:'production',lv:1,x:768,y:138,owner:8},
+  {k:'production',lv:1,x:237,y:138,owner:4},
+  {k:'production',lv:1,x:138,y:327,owner:2},
+  {k:'production',lv:1,x:138,y:957,owner:3},
+  {k:'production',lv:1,x:327,y:1038,owner:5},
+  {k:'production',lv:1,x:1068,y:747,owner:1},
+  {k:'production',lv:1,x:957,y:1068,owner:4},
+  {k:'gathering',lv:1,x:957,y:138,owner:7},
+  {k:'gathering',lv:1,x:537,y:87,owner:6},
+  {k:'gathering',lv:1,x:138,y:237,owner:4},
+  {k:'gathering',lv:1,x:87,y:666,owner:3},
+  {k:'gathering',lv:1,x:267,y:1068,owner:8},
+  {k:'gathering',lv:1,x:636,y:1137,owner:0},
+  {k:'gathering',lv:1,x:1137,y:567,owner:1},
+  {k:'gathering',lv:1,x:1068,y:936,owner:3},
+  {k:'frontier',lv:3,x:768,y:327,owner:7},
+  {k:'frontier',lv:3,x:327,y:567,owner:4},
+  {k:'frontier',lv:3,x:486,y:867,owner:3},
+  {k:'frontier',lv:3,x:867,y:666,owner:1},
+  {k:'attack',lv:2,x:867,y:138,owner:8},
+  {k:'attack',lv:2,x:366,y:138,owner:4},
+  {k:'attack',lv:2,x:138,y:438,owner:2},
+  {k:'attack',lv:2,x:138,y:867,owner:3},
+  {k:'attack',lv:2,x:438,y:1068,owner:0},
+  {k:'attack',lv:2,x:1068,y:327,owner:9},
+  {k:'attack',lv:2,x:1068,y:867,owner:1},
+  {k:'attack',lv:2,x:867,y:1068,owner:3},
+  {k:'attack',lv:4,x:588,y:867,owner:3},
+  {k:'attack',lv:4,x:387,y:486,owner:4},
+  {k:'attack',lv:4,x:816,y:486,owner:1},
+  {k:'defense',lv:2,x:537,y:1038,owner:5},
+  {k:'defense',lv:2,x:237,y:768,owner:3},
+  {k:'defense',lv:2,x:138,y:537,owner:2},
+  {k:'defense',lv:2,x:438,y:267,owner:4},
+  {k:'defense',lv:2,x:666,y:138,owner:6},
+  {k:'defense',lv:2,x:957,y:438,owner:7},
+  {k:'defense',lv:2,x:1068,y:666,owner:1},
+  {k:'defense',lv:2,x:738,y:957,owner:0},
+  {k:'defense',lv:4,x:816,y:717,owner:1},
+  {k:'defense',lv:4,x:588,y:327,owner:2},
+  {k:'defense',lv:4,x:387,y:717,owner:4}
 ];
 
 /**
@@ -493,7 +541,21 @@ mapBgImg.onerror = () => { bgImgLoaded = false; render(); }; // use procedural f
    ═══════════════════════════════════════════════════════════════ */
 
 /** @type {Array<{name:string, hex:string}>} */
-let alliances = [];
+let alliances = [
+  {name:'UAO',hex:'#5563C1',border:'#8899FF'},
+  {name:'LOL',hex:'#D85A30',border:'#FF8A60'},
+  {name:'HEX',hex:'#1D9E75',border:'#50D4A0'},
+  {name:'lOO',hex:'#D4537E',border:'#FF80AA'},
+  {name:'ALE',hex:'#BA7517',border:'#FFD060'},
+  {name:'RIP',hex:'#378ADD',border:'#70BBFF'},
+  {name:'HMB',hex:'#9333EA',border:'#CC77FF'},
+  {name:'lol',hex:'#14B8A6',border:'#50EDE0'},
+  {name:'NHA',hex:'#F97316',border:'#FFBB66'},
+  {name:'UaO',hex:'#EC4899',border:'#FF80CC'},
+  {name:'TLC',hex:'#06B6D4',border:'#22D3EE'},
+  {name:'KING',hex:'#F43F5E',border:'#F87171'},
+  {name:'Vpj',hex:'#84CC16',border:'#A3E635'}
+];
 
 /** Index into alliances[] of the currently active alliance for assignment. */
 let selA = 0;
@@ -1847,7 +1909,14 @@ async function init() {
   // ── Context menu ──
   initContextMenu();
 
-  // ── View mode buttons ──
+  // ── Sidebar toggle ──
+document.getElementById('toggleSidebar').addEventListener('click', () => {
+  document.querySelector('.layout').classList.toggle('sidebar-hidden');
+  const btn = document.getElementById('toggleSidebar');
+  btn.textContent = document.querySelector('.layout').classList.contains('sidebar-hidden') ? '▶' : '◀';
+});
+
+// ── View mode buttons ──
   document.getElementById('viewMap').addEventListener('click',   () => setViewMode('map'));
   document.getElementById('viewSplit').addEventListener('click', () => setViewMode('split'));
   document.getElementById('viewTable').addEventListener('click', () => setViewMode('table'));
