@@ -1,0 +1,659 @@
+
+<!DOCTYPE html>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2230;--bg4:#21283a;
+  --border:#2a3550;--border2:#3a4870;
+  --gold:#e8c84a;--gold2:#f5d96a;--gold-dim:#7a6520;
+  --text:#c9d1d9;--text2:#8b949e;--text3:#4a5568;
+  --blue:#58a6ff;--purple:#bc8cff;--red:#f85149;--green:#3fb950;--orange:#d29922;
+}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;gap:10px}
+.header-crown{font-size:20px;filter:drop-shadow(0 0 8px var(--gold))}
+.header-title{font-size:19px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+.header-sub{font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;margin-left:auto}
+.saved-badge{font-size:10px;padding:2px 8px;border-radius:3px;font-family:'IBM Plex Mono',monospace;margin-left:8px;opacity:0;transition:opacity 0.4s}
+.saved-badge.show{opacity:1;background:#1a3a20;color:var(--green);border:1px solid #2d5a30}
+.layout{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 49px);min-height:500px}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-section{padding:12px 14px;border-bottom:1px solid var(--border)}
+.sidebar-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px}
+
+/* Alliance card */
+.alliance-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;cursor:pointer;transition:border-color 0.15s}
+.alliance-card:hover{border-color:var(--border2)}
+.alliance-card.active{border-color:var(--border2)}
+.alliance-card-header{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.a-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.a-name-inp{background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;flex:1;min-width:0}
+.a-name-inp::placeholder{color:var(--text3)}
+.a-del{font-size:14px;color:var(--text3);cursor:pointer;padding:0 2px;line-height:1;opacity:0;transition:opacity 0.15s}
+.alliance-card:hover .a-del{opacity:1}
+.a-del:hover{color:var(--red)}
+
+/* Outpost count bar */
+.op-count-row{display:flex;align-items:center;gap:8px;padding:0 10px 6px;font-size:11px;color:var(--text2)}
+.op-count-num{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500}
+.op-count-bar-wrap{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.op-count-bar{height:100%;border-radius:2px;transition:width 0.3s}
+
+/* Missing tracker */
+.missing-section{padding:6px 10px 8px}
+.missing-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:5px}
+.missing-grid{display:flex;flex-wrap:wrap;gap:3px}
+.type-chip{font-size:9px;padding:2px 6px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-weight:500;letter-spacing:0.5px;display:flex;align-items:center;gap:3px}
+.type-chip.have{opacity:0.35}
+.type-chip.missing{opacity:1}
+.chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+
+/* Detail breakdown */
+.breakdown-section{padding:0 10px 8px}
+.breakdown-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:5px}
+.breakdown-row{display:flex;align-items:center;gap:6px;padding:2px 0}
+.br-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.br-name{font-size:11px;color:var(--text2);flex:1}
+.br-val{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text)}
+.br-bar-wrap{width:40px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.br-bar{height:100%;border-radius:2px}
+
+.add-alliance-btn{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:6px;border:1px dashed var(--border);color:var(--text3);cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;transition:all 0.15s;width:100%}
+.add-alliance-btn:hover{border-color:var(--gold-dim);color:var(--gold)}
+
+.filter-btns{display:flex;flex-wrap:wrap;gap:5px}
+.fbtn{font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all 0.15s}
+.fbtn:hover{border-color:var(--border2);color:var(--text)}
+.fbtn.on{border-color:var(--gold-dim);background:rgba(232,200,74,0.08);color:var(--gold)}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px}
+.stat-val{font-size:18px;font-weight:700;color:var(--gold);font-family:'IBM Plex Mono',monospace}
+.stat-lbl{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+
+/* MAIN */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.toolbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.toolbar-label{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.view-btn{font-size:12px;padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:1px;transition:all 0.15s}
+.view-btn:hover{border-color:var(--border2);color:var(--text)}
+.view-btn.on{background:var(--bg4);border-color:var(--border2);color:var(--gold)}
+.reset-btn{margin-left:auto;font-size:12px;padding:4px 12px;border-radius:4px;border:1px solid #3a1a1a;background:transparent;color:var(--red);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;transition:all 0.15s}
+.reset-btn:hover{background:#1a0808;border-color:var(--red)}
+.content{display:flex;flex:1;overflow:hidden}
+.map-pane{flex:1;position:relative;overflow:hidden;background:#0a130a;display:flex}
+canvas{display:block;width:100%;height:100%}
+.map-tip{position:absolute;background:rgba(13,17,23,0.95);border:1px solid var(--border2);color:var(--text);font-size:11px;padding:7px 10px;border-radius:6px;pointer-events:none;display:none;z-index:20;white-space:nowrap;font-family:'IBM Plex Mono',monospace;line-height:1.6}
+.map-tip b{color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700}
+.table-pane{width:320px;border-left:1px solid var(--border);overflow-y:auto;background:var(--bg);flex-shrink:0}
+.table-head{display:grid;grid-template-columns:1fr 90px 50px;background:var(--bg2);border-bottom:1px solid var(--border);padding:7px 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:'IBM Plex Mono',monospace;position:sticky;top:0;z-index:5}
+.trow{display:grid;grid-template-columns:1fr 90px 50px;padding:5px 12px;border-bottom:1px solid var(--border);align-items:center;cursor:pointer;transition:background 0.1s}
+.trow:hover{background:var(--bg3)}
+.trow.highlighted{background:var(--bg4)}
+.trow-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow-coord{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.trow-badge{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:0.5px;text-align:center;font-family:'IBM Plex Mono',monospace;white-space:nowrap;display:inline-block}
+.trow-owner{display:flex;align-items:center;gap:4px}
+.owner-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.search-wrap{padding:7px 12px;border-bottom:1px solid var(--border);position:sticky;top:33px;background:var(--bg);z-index:4}
+.search-inp{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;transition:border 0.15s}
+.search-inp:focus{border-color:var(--gold-dim)}
+.search-inp::placeholder{color:var(--text3)}
+.ctx-menu{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;z-index:100;min-width:160px;padding:4px 0;display:none}
+.ctx-item{padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text);transition:background 0.1s;font-family:'Rajdhani',sans-serif}
+.ctx-item:hover{background:var(--bg3)}
+.ctx-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ctx-divider{height:1px;background:var(--border);margin:3px 0}
+.ctx-unassign{color:var(--text3)}
+.ctx-unassign:hover{color:var(--red);background:var(--bg3)}
+
+/* Legend */
+.legend-row{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:10px;color:var(--text2)}
+.legend-img{width:16px;height:16px;object-fit:contain;border-radius:2px}
+</style>
+
+<div class="header">
+  <span class="header-crown">♛</span>
+  <span class="header-title">Server 1363 — Admin</span>
+  <span class="header-sub">Ownership Control Panel · v3 (complete)</span>
+  <span class="saved-badge" id="savedBadge">✓ Saved</span>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Alliances</div>
+      <div id="allianceList"></div>
+      <button class="add-alliance-btn" id="addAllianceBtn"><span>+</span> Add alliance</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by type</div>
+      <div class="filter-btns" id="filterBtns"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Legend</div>
+      <div id="legendGrid"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Server stats</div>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="toolbar">
+      <span class="toolbar-label">View:</span>
+      <button class="view-btn on" id="viewMap">Map</button>
+      <button class="view-btn" id="viewSplit">Map + Table</button>
+      <button class="view-btn" id="viewTable">Table only</button>
+      <button class="reset-btn" id="resetBtn">⚠ Reset all</button>
+    </div>
+    <div class="content" id="content">
+      <div class="map-pane" id="mapPane">
+        <canvas id="mc"></canvas>
+        <div class="map-tip" id="mapTip"></div>
+      </div>
+      <div class="table-pane" id="tablePane" style="display:none">
+        <div class="table-head"><span>Building</span><span>Owner</span><span>Type</span></div>
+        <div class="search-wrap"><input class="search-inp" id="searchInp" placeholder="Search buildings…"></div>
+        <div id="tableBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ctx-menu" id="ctxMenu"></div>
+
+<script>
+const ALLIANCE_COLORS=['#5563C1','#D85A30','#1D9E75','#D4537E','#BA7517','#378ADD','#9333EA','#14B8A6','#F97316','#EC4899'];
+
+// Official Kingshot wiki asset URLs
+const ASSETS = {
+  construction: 'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Construction-Outpost-1.png',
+  research:     'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Research-outpost.png',
+  training:     'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Training-Outpost.png',
+  production:   'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Resources-Production-Outpost.png',
+  gathering:    'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Gathering-Outpost.png',
+  frontier:     'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Frontier-Lodge-Outposts.png',
+  attack:       'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Squad-Attack-Outpost.png',
+  defense:      'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Defense-Outpost.png',
+};
+
+const TYPES={
+  construction:{name:"Builder's Guild",  short:'BG', color:'#D97706'},
+  research:    {name:"Scholar's Tower",  short:'ST', color:'#0891B2'},
+  training:    {name:'Drill Camp',       short:'DC', color:'#7C3AED'},
+  production:  {name:'Harvest Altar',    short:'HA', color:'#059669'},
+  gathering:   {name:'Forager Grove',    short:'FG', color:'#BE185D'},
+  frontier:    {name:'Frontier Lodge',   short:'FL', color:'#EA580C'},
+  attack:      {name:'Arsenal',          short:'AR', color:'#DC2626'},
+  defense:     {name:'Armory',           short:'AM', color:'#1D4ED8'},
+};
+const OUTPOST_TYPE_KEYS=Object.keys(TYPES);
+
+// Preload all asset images
+const IMG_CACHE={};
+OUTPOST_TYPE_KEYS.forEach(k=>{
+  const img=new Image();img.src=ASSETS[k];IMG_CACHE[k]=img;
+});
+
+const RAW=[
+  // Builder's Guild Lv.1 (8)
+  {k:'construction',lv:1,x:1068,y:138},{k:'construction',lv:1,x:537,y:138},{k:'construction',lv:1,x:138,y:138},
+  {k:'construction',lv:1,x:138,y:666},{k:'construction',lv:1,x:138,y:1038},{k:'construction',lv:1,x:666,y:1068},
+  {k:'construction',lv:1,x:1068,y:567},{k:'construction',lv:1,x:1068,y:1068},
+  // Builder's Guild Lv.3 (4)
+  {k:'construction',lv:3,x:486,y:327},{k:'construction',lv:3,x:768,y:867},{k:'construction',lv:3,x:867,y:567},{k:'construction',lv:3,x:327,y:666},
+
+  // Scholar's Tower Lv.1 (8)
+  {k:'research',lv:1,x:957,y:237},{k:'research',lv:1,x:666,y:267},{k:'research',lv:1,x:237,y:237},
+  {k:'research',lv:1,x:267,y:537},{k:'research',lv:1,x:237,y:957},{k:'research',lv:1,x:537,y:936},
+  {k:'research',lv:1,x:936,y:537},{k:'research',lv:1,x:957,y:957},
+  // Scholar's Tower Lv.3 (4)
+  {k:'research',lv:3,x:867,y:327},{k:'research',lv:3,x:327,y:327},{k:'research',lv:3,x:327,y:867},{k:'research',lv:3,x:867,y:867},
+
+  // Drill Camp Lv.2 (8)
+  {k:'training',lv:2,x:237,y:486},{k:'training',lv:2,x:138,y:747},{k:'training',lv:2,x:486,y:957},
+  {k:'training',lv:2,x:768,y:1038},{k:'training',lv:2,x:957,y:747},{k:'training',lv:2,x:1068,y:486},
+  {k:'training',lv:2,x:486,y:138},{k:'training',lv:2,x:768,y:237},
+
+  // Harvest Altar Lv.1 (8)
+  {k:'production',lv:1,x:1068,y:237},{k:'production',lv:1,x:768,y:138},{k:'production',lv:1,x:237,y:138},
+  {k:'production',lv:1,x:138,y:327},{k:'production',lv:1,x:138,y:957},{k:'production',lv:1,x:327,y:1038},
+  {k:'production',lv:1,x:1068,y:747},{k:'production',lv:1,x:957,y:1068},
+
+  // Forager Grove Lv.1 (8)
+  {k:'gathering',lv:1,x:957,y:138},{k:'gathering',lv:1,x:537,y:87},{k:'gathering',lv:1,x:138,y:237},
+  {k:'gathering',lv:1,x:87,y:666},{k:'gathering',lv:1,x:267,y:1068},{k:'gathering',lv:1,x:636,y:1137},
+  {k:'gathering',lv:1,x:1137,y:567},{k:'gathering',lv:1,x:1068,y:936},
+
+  // Frontier Lodge Lv.3 (4)
+  {k:'frontier',lv:3,x:768,y:327},{k:'frontier',lv:3,x:327,y:567},{k:'frontier',lv:3,x:486,y:867},{k:'frontier',lv:3,x:867,y:666},
+
+  // Arsenal Lv.2 (8) — added X867,Y1068 which was missing
+  {k:'attack',lv:2,x:867,y:138},{k:'attack',lv:2,x:366,y:138},{k:'attack',lv:2,x:138,y:438},
+  {k:'attack',lv:2,x:138,y:867},{k:'attack',lv:2,x:438,y:1068},{k:'attack',lv:2,x:1068,y:327},
+  {k:'attack',lv:2,x:1068,y:867},{k:'attack',lv:2,x:867,y:1068},
+  // Arsenal Lv.4 (3) — near center, were missing
+  {k:'attack',lv:4,x:588,y:867},{k:'attack',lv:4,x:387,y:486},{k:'attack',lv:4,x:816,y:486},
+
+  // Armory Lv.2 (8) — entire defense type was missing
+  {k:'defense',lv:2,x:537,y:1038},{k:'defense',lv:2,x:237,y:768},{k:'defense',lv:2,x:138,y:537},
+  {k:'defense',lv:2,x:438,y:267},{k:'defense',lv:2,x:666,y:138},{k:'defense',lv:2,x:957,y:438},
+  {k:'defense',lv:2,x:1068,y:666},{k:'defense',lv:2,x:738,y:957},
+  // Armory Lv.4 (3) — near center, were missing
+  {k:'defense',lv:4,x:816,y:717},{k:'defense',lv:4,x:588,y:327},{k:'defense',lv:4,x:387,y:717},
+];
+
+const SANCTUARIES=[
+  // Sanctuary 1 was missing — added
+  {n:'Sanctuary 1',x:606,y:237},
+  {n:'Sanctuary 2',x:237,y:606},{n:'Sanctuary 3',x:237,y:348},{n:'Sanctuary 4',x:366,y:237},
+  {n:'Sanctuary 5',x:588,y:237},{n:'Sanctuary 6',x:846,y:237},{n:'Sanctuary 7',x:957,y:348},
+  {n:'Sanctuary 8',x:957,y:606},{n:'Sanctuary 9',x:957,y:828},{n:'Sanctuary 10',x:846,y:957},
+  {n:'Sanctuary 11',x:606,y:957},{n:'Sanctuary 12',x:366,y:957},
+];
+const FORTRESSES=[
+  {n:'Fortress 1',x:597,y:800},{n:'Fortress 2',x:400,y:597},{n:'Fortress 3',x:597,y:400},{n:'Fortress 4',x:800,y:597},
+];
+
+const allFeatures=[
+  ...RAW.map((o,i)=>({...o,id:'op'+i,cat:'outpost',alliance:null})),
+  ...SANCTUARIES.map((s,i)=>({...s,id:'san'+i,cat:'sanctuary',alliance:null,k:'sanctuary',lv:null})),
+  ...FORTRESSES.map((f,i)=>({...f,id:'fort'+i,cat:'fortress',alliance:null,k:'fortress',lv:null})),
+  {n:"King's Castle",id:'castle',cat:'castle',x:597,y:597,alliance:null,k:'castle',lv:null},
+];
+
+const TOTAL_OUTPOSTS=allFeatures.filter(f=>f.cat==='outpost').length;
+
+let alliances=[];
+let selA=0;
+let activeFilters=new Set(['outpost','sanctuary','fortress']);
+let viewMode='map';
+let highlightId=null;
+let searchQ='';
+const MAP_MIN=87,MAP_MAX=1137;
+let CW=600,CH=600;
+const PAD=28;
+
+function toC(gx,gy){
+  const d=Math.min(CW,CH)-PAD*2;
+  const ox=PAD+(CW-2*PAD-d)/2,oy=PAD+(CH-2*PAD-d)/2;
+  return{cx:ox+((gx-MAP_MIN)/(MAP_MAX-MAP_MIN))*d,cy:oy+((gy-MAP_MIN)/(MAP_MAX-MAP_MIN))*d};
+}
+function getR(f){
+  if(f.cat==='castle')return 13;
+  if(f.cat==='fortress')return 11;
+  if(f.cat==='sanctuary')return 9;
+  return f.lv===1?6:f.lv===2?7.5:f.lv===3?9:11;
+}
+function getAColor(idx){return idx!==null&&idx>=0&&idx<alliances.length?alliances[idx].hex:null;}
+function getAName(idx){return idx!==null&&idx>=0&&idx<alliances.length?alliances[idx].name:null;}
+
+function getAllianceStats(ai){
+  const owned=allFeatures.filter(f=>f.alliance===ai&&f.cat==='outpost');
+  const typesHeld=new Set(owned.map(f=>f.k));
+  const missing=OUTPOST_TYPE_KEYS.filter(k=>!typesHeld.has(k));
+  const byType={};
+  OUTPOST_TYPE_KEYS.forEach(k=>{byType[k]=owned.filter(f=>f.k===k).length;});
+  const sanctions=allFeatures.filter(f=>f.alliance===ai&&f.cat==='sanctuary').length;
+  const forts=allFeatures.filter(f=>f.alliance===ai&&f.cat==='fortress').length;
+  return{total:owned.length,missing,byType,sanctions,forts};
+}
+
+async function save(){
+  try{
+    const data={alliances,ownership:allFeatures.reduce((a,f)=>{if(f.alliance!==null)a[f.id]=f.alliance;return a},{})};
+    await window.storage.set('kingshot_1363_v3',JSON.stringify(data),false);
+    const badge=document.getElementById('savedBadge');
+    badge.classList.add('show');setTimeout(()=>badge.classList.remove('show'),2000);
+  }catch(e){}
+}
+async function load(){
+  try{
+    // Try loading v3 first, fall back to v2 for migration
+    let r=await window.storage.get('kingshot_1363_v3',false).catch(()=>null);
+    if(!r){r=await window.storage.get('kingshot_1363_v2',false).catch(()=>null);}
+    if(r&&r.value){
+      const data=JSON.parse(r.value);
+      if(data.alliances&&data.alliances.length)alliances=data.alliances;
+      if(data.ownership)allFeatures.forEach(f=>{if(data.ownership[f.id]!==undefined)f.alliance=data.ownership[f.id];});
+    }
+  }catch(e){}
+  if(!alliances.length){
+    alliances=[{name:'Alliance 1',hex:'#5563C1'},{name:'Alliance 2',hex:'#D85A30'},{name:'Alliance 3',hex:'#1D9E75'},{name:'Alliance 4',hex:'#D4537E'}];
+  }
+}
+
+function featureLabel(f){
+  if(f.cat==='castle')return"King's Castle";
+  if(f.cat==='fortress'||f.cat==='sanctuary')return f.n;
+  return`${TYPES[f.k].name} Lv.${f.lv}`;
+}
+function featureShort(f){
+  if(f.cat==='castle')return'♛';
+  if(f.cat==='fortress')return f.n.replace('Fortress ','F');
+  if(f.cat==='sanctuary')return f.n.replace('Sanctuary ','S');
+  return`${TYPES[f.k].short}${f.lv}`;
+}
+function featureColor(f){
+  if(f.cat==='castle')return'#F59E0B';
+  if(f.cat==='fortress')return'#818CF8';
+  if(f.cat==='sanctuary')return'#C084FC';
+  return TYPES[f.k].color;
+}
+
+function buildAllianceList(){
+  const el=document.getElementById('allianceList');el.innerHTML='';
+  alliances.forEach((a,i)=>{
+    const stats=getAllianceStats(i);
+    const pct=TOTAL_OUTPOSTS>0?Math.round(stats.total/TOTAL_OUTPOSTS*100):0;
+
+    const card=document.createElement('div');
+    card.className='alliance-card'+(i===selA?' active':'');
+    card.style.borderColor=i===selA?a.hex:undefined;
+    card.onclick=()=>{selA=i;buildAllianceList();};
+
+    const hdr=document.createElement('div');hdr.className='alliance-card-header';
+    const sw=document.createElement('div');sw.className='a-swatch';sw.style.background=a.hex;hdr.appendChild(sw);
+    const inp=document.createElement('input');inp.className='a-name-inp';inp.value=a.name;inp.placeholder='Alliance name…';
+    inp.onclick=e=>{e.stopPropagation();selA=i;buildAllianceList();};
+    inp.oninput=()=>{alliances[i].name=inp.value;draw();renderTable();buildAllianceList();buildStats();save();};
+    hdr.appendChild(inp);
+    const del=document.createElement('span');del.className='a-del';del.textContent='×';
+    del.onclick=e=>{e.stopPropagation();if(confirm(`Remove ${alliances[i].name}?`)){allFeatures.forEach(f=>{if(f.alliance===i)f.alliance=null;else if(f.alliance!==null&&f.alliance>i)f.alliance--;});alliances.splice(i,1);if(selA>=alliances.length)selA=Math.max(0,alliances.length-1);buildAllianceList();draw();renderTable();buildStats();save();}};
+    hdr.appendChild(del);
+    card.appendChild(hdr);
+
+    const countRow=document.createElement('div');countRow.className='op-count-row';
+    countRow.innerHTML=`<span style="color:var(--text3);font-size:11px">Outposts:</span><span class="op-count-num" style="color:${a.hex}">${stats.total}</span><span style="color:var(--text3)">/ ${TOTAL_OUTPOSTS}</span><div class="op-count-bar-wrap"><div class="op-count-bar" style="width:${pct}%;background:${a.hex}"></div></div><span style="color:var(--text3);font-size:10px;font-family:'IBM Plex Mono',monospace">${pct}%</span>`;
+    card.appendChild(countRow);
+
+    if(stats.sanctions>0||stats.forts>0){
+      const sfRow=document.createElement('div');
+      sfRow.style.cssText='display:flex;gap:8px;padding:0 10px 5px;font-size:10px;color:var(--text2)';
+      if(stats.sanctions>0)sfRow.innerHTML+=`<span style="color:#C084FC">◆ ${stats.sanctions} sanct.</span>`;
+      if(stats.forts>0)sfRow.innerHTML+=`<span style="color:#818CF8">◈ ${stats.forts} fort.</span>`;
+      card.appendChild(sfRow);
+    }
+
+    const bdSection=document.createElement('div');bdSection.className='breakdown-section';
+    const bdTitle=document.createElement('div');bdTitle.className='breakdown-title';bdTitle.textContent='By type';
+    bdSection.appendChild(bdTitle);
+    const maxOfType=Math.max(1,...OUTPOST_TYPE_KEYS.map(k=>stats.byType[k]));
+    OUTPOST_TYPE_KEYS.forEach(k=>{
+      const cnt=stats.byType[k];
+      if(cnt===0)return;
+      const t=TYPES[k];
+      const row=document.createElement('div');row.className='breakdown-row';
+      row.innerHTML=`<div class="br-dot" style="background:${t.color}"></div><span class="br-name">${t.name}</span><span class="br-val" style="color:${t.color}">${cnt}</span><div class="br-bar-wrap"><div class="br-bar" style="width:${Math.round(cnt/maxOfType*100)}%;background:${t.color}"></div></div>`;
+      bdSection.appendChild(row);
+    });
+    if(Object.values(stats.byType).every(v=>v===0)){
+      const empty=document.createElement('div');empty.style.cssText='font-size:11px;color:var(--text3);padding:2px 0';empty.textContent='No outposts owned';
+      bdSection.appendChild(empty);
+    }
+    card.appendChild(bdSection);
+
+    const missSect=document.createElement('div');missSect.className='missing-section';
+    const missTitle=document.createElement('div');missTitle.className='missing-title';
+    missTitle.textContent=stats.missing.length===0?'✓ All types covered':`Missing ${stats.missing.length} type${stats.missing.length>1?'s':''}`;
+    missTitle.style.color=stats.missing.length===0?'var(--green)':'var(--orange)';
+    missSect.appendChild(missTitle);
+    const grid=document.createElement('div');grid.className='missing-grid';
+    OUTPOST_TYPE_KEYS.forEach(k=>{
+      const t=TYPES[k];
+      const isMissing=stats.missing.includes(k);
+      const chip=document.createElement('div');
+      chip.className='type-chip '+(isMissing?'missing':'have');
+      chip.style.cssText=`background:${t.color}${isMissing?'22':'11'};color:${t.color};border:1px solid ${t.color}${isMissing?'55':'22'}`;
+      chip.innerHTML=`<div class="chip-dot" style="background:${t.color};opacity:${isMissing?1:0.4}"></div>${t.short}`;
+      if(isMissing)chip.title=`Missing: ${t.name}`;
+      else chip.title=`Has ${t.name} (${stats.byType[k]})`;
+      grid.appendChild(chip);
+    });
+    missSect.appendChild(grid);
+    card.appendChild(missSect);
+
+    el.appendChild(card);
+  });
+}
+
+function buildLegend(){
+  const el=document.getElementById('legendGrid');el.innerHTML='';
+  // Outpost types
+  OUTPOST_TYPE_KEYS.forEach(k=>{
+    const t=TYPES[k];
+    const row=document.createElement('div');row.className='legend-row';
+    const img=document.createElement('img');img.className='legend-img';img.src=ASSETS[k];img.alt=t.name;
+    img.onerror=()=>{img.style.display='none';};
+    const dot=document.createElement('span');dot.style.cssText=`display:inline-block;width:8px;height:8px;border-radius:50%;background:${t.color};flex-shrink:0`;
+    const lbl=document.createElement('span');lbl.textContent=t.name;lbl.style.fontSize='10px';
+    row.appendChild(img);row.appendChild(dot);row.appendChild(lbl);
+    el.appendChild(row);
+  });
+  // Special
+  [{label:'Sanctuary',color:'#C084FC',sym:'●'},{label:'Fortress',color:'#818CF8',sym:'◆'},{label:"King's Castle",color:'#F59E0B',sym:'★'}].forEach(({label,color,sym})=>{
+    const row=document.createElement('div');row.className='legend-row';
+    const dot=document.createElement('span');dot.style.cssText=`display:inline-block;width:16px;height:16px;border-radius:2px;background:transparent;flex-shrink:0;text-align:center;line-height:16px;font-size:12px;color:${color}`;dot.textContent=sym;
+    const lbl=document.createElement('span');lbl.textContent=label;lbl.style.fontSize='10px';
+    row.appendChild(dot);row.appendChild(lbl);
+    el.appendChild(row);
+  });
+}
+
+function buildFilters(){
+  const el=document.getElementById('filterBtns');el.innerHTML='';
+  [['outpost','Outposts'],['sanctuary','Sanctuaries'],['fortress','Fortresses']].forEach(([k,lbl])=>{
+    const btn=document.createElement('button');btn.className='fbtn'+(activeFilters.has(k)?' on':'');
+    btn.textContent=lbl;btn.onclick=()=>{if(activeFilters.has(k))activeFilters.delete(k);else activeFilters.add(k);buildFilters();draw();renderTable();};
+    el.appendChild(btn);
+  });
+}
+
+function buildStats(){
+  const el=document.getElementById('statsGrid');el.innerHTML='';
+  const total=allFeatures.filter(f=>f.cat!=='castle').length;
+  const owned=allFeatures.filter(f=>f.cat!=='castle'&&f.alliance!==null).length;
+  [{v:total,l:'Total buildings'},{v:owned,l:'Owned'},{v:total-owned,l:'Unowned'},{v:alliances.length,l:'Alliances'}].forEach(({v,l})=>{
+    const c=document.createElement('div');c.className='stat-card';
+    c.innerHTML=`<div class="stat-val">${v}</div><div class="stat-lbl">${l}</div>`;el.appendChild(c);
+  });
+}
+
+/* ---- CANVAS ---- */
+const canvas=document.getElementById('mc');
+const ctx2=canvas.getContext('2d');
+function resizeCanvas(){const p=document.getElementById('mapPane');CW=p.clientWidth||600;CH=p.clientHeight||600;canvas.width=CW;canvas.height=CH;}
+function drawDiamond(cx,cy,r,fill,stroke,lw){ctx2.beginPath();ctx2.moveTo(cx,cy-r);ctx2.lineTo(cx+r,cy);ctx2.lineTo(cx,cy+r);ctx2.lineTo(cx-r,cy);ctx2.closePath();ctx2.fillStyle=fill;ctx2.fill();ctx2.strokeStyle=stroke;ctx2.lineWidth=lw||1.5;ctx2.stroke();}
+function drawStar(cx,cy,ro,ri,fill,stroke){ctx2.beginPath();for(let i=0;i<10;i++){const r=i%2===0?ro:ri,a=(i*Math.PI/5)-Math.PI/2;i===0?ctx2.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx2.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}ctx2.closePath();ctx2.fillStyle=fill;ctx2.fill();ctx2.strokeStyle=stroke;ctx2.lineWidth=2;ctx2.stroke();}
+
+function draw(){
+  ctx2.clearRect(0,0,CW,CH);
+  const cx2=PAD+(CW-PAD*2)/2,cy2=PAD+(CH-PAD*2)/2,R=Math.min(CW,CH)/2-PAD;
+  [[R,'rgba(140,110,60,0.06)','Badlands'],[R*0.63,'rgba(120,160,60,0.07)','Plains'],[R*0.35,'rgba(40,140,60,0.10)','Fertile Lands']].forEach(([r,c,lbl])=>{
+    ctx2.beginPath();ctx2.arc(cx2,cy2,r,0,Math.PI*2);ctx2.fillStyle=c;ctx2.fill();
+    ctx2.strokeStyle='rgba(255,255,255,0.04)';ctx2.lineWidth=0.5;ctx2.stroke();
+    ctx2.fillStyle='rgba(255,255,255,0.13)';ctx2.font='10px "IBM Plex Mono"';ctx2.textAlign='center';
+    ctx2.fillText(lbl,cx2,cy2-r+12);
+  });
+  ctx2.strokeStyle='rgba(255,255,255,0.03)';ctx2.lineWidth=0.5;
+  const d=Math.min(CW,CH)-PAD*2;
+  for(let i=1;i<8;i++){ctx2.beginPath();ctx2.moveTo(PAD+d/7*i,PAD);ctx2.lineTo(PAD+d/7*i,PAD+d);ctx2.stroke();ctx2.beginPath();ctx2.moveTo(PAD,PAD+d/7*i);ctx2.lineTo(PAD+d,PAD+d/7*i);ctx2.stroke();}
+
+  allFeatures.forEach(f=>{
+    if(f.cat!=='castle'&&!activeFilters.has(f.cat))return;
+    const {cx,cy}=toC(f.x,f.y);const r=getR(f);
+    const aColor=getAColor(f.alliance);const baseColor=featureColor(f);const isHL=f.id===highlightId;
+    if(isHL){ctx2.beginPath();ctx2.arc(cx,cy,r+8,0,Math.PI*2);ctx2.fillStyle='rgba(232,200,74,0.15)';ctx2.fill();}
+    if(aColor&&f.cat!=='castle'){ctx2.beginPath();ctx2.arc(cx,cy,r+4,0,Math.PI*2);ctx2.fillStyle=aColor+'28';ctx2.fill();}
+
+    if(f.cat==='castle'){
+      drawStar(cx,cy,r,r*0.5,aColor||'#92400E','#F59E0B');
+      ctx2.fillStyle='#FFF';ctx2.font=`bold ${r}px sans-serif`;ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText('♛',cx,cy+1);
+    }else if(f.cat==='fortress'){
+      drawDiamond(cx,cy,r,aColor||'#1e1b4b','#818CF8',isHL?2.5:2);
+      ctx2.fillStyle='#fff';ctx2.font=`bold 8px "Rajdhani"`;ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText(f.n.replace('Fortress ','F'),cx,cy);
+    }else if(f.cat==='sanctuary'){
+      ctx2.beginPath();ctx2.arc(cx,cy,r,0,Math.PI*2);ctx2.fillStyle=aColor||'#4a1d8a';ctx2.strokeStyle=aColor?aColor:'#C084FC';ctx2.lineWidth=isHL?2.5:2;ctx2.fill();ctx2.stroke();
+      ctx2.fillStyle='#fff';ctx2.font=`bold 8px "Rajdhani"`;ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText(f.n.replace('Sanctuary ','S'),cx,cy);
+    }else{
+      // Outpost — draw official image asset if loaded, else fallback to colored circle
+      const img=IMG_CACHE[f.k];
+      const sz=r*2.2;
+      // Draw background circle (color-coded)
+      const t=TYPES[f.k];
+      ctx2.beginPath();ctx2.arc(cx,cy,r,0,Math.PI*2);
+      ctx2.fillStyle=aColor||(t.color+'33');
+      ctx2.strokeStyle=aColor||t.color;
+      ctx2.lineWidth=isHL?2:1.5;
+      ctx2.fill();ctx2.stroke();
+      // Draw image icon if available
+      if(img&&img.complete&&img.naturalWidth>0){
+        ctx2.save();
+        ctx2.beginPath();ctx2.arc(cx,cy,r-1,0,Math.PI*2);ctx2.clip();
+        ctx2.drawImage(img,cx-r+1,cy-r+1,(r-1)*2,(r-1)*2);
+        ctx2.restore();
+        // Lv badge for Lv.4
+        if(f.lv===4){
+          ctx2.fillStyle='rgba(0,0,0,0.7)';ctx2.beginPath();ctx2.arc(cx+r*0.55,cy-r*0.55,4.5,0,Math.PI*2);ctx2.fill();
+          ctx2.fillStyle='#FFD700';ctx2.font='bold 5px "IBM Plex Mono"';ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText('4',cx+r*0.55,cy-r*0.55+0.5);
+        }
+      } else {
+        // Fallback text label
+        ctx2.fillStyle=aColor?'#fff':t.color;ctx2.font=`bold ${r<8?7:8}px "IBM Plex Mono"`;ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText(featureShort(f),cx,cy);
+      }
+    }
+
+    if(aColor&&f.cat!=='castle'){const n=getAName(f.alliance)||'';const tag=n.length>5?n.substring(0,4)+'…':n;ctx2.fillStyle=aColor;ctx2.font=`7px "Rajdhani"`;ctx2.textAlign='center';ctx2.textBaseline='top';ctx2.fillText(tag,cx,cy+r+2);}
+    ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
+  });
+}
+
+function renderTable(){
+  const body=document.getElementById('tableBody');body.innerHTML='';
+  const q=searchQ.toLowerCase();
+  const filtered=allFeatures.filter(f=>{
+    if(f.cat==='castle')return false;
+    if(!activeFilters.has(f.cat))return false;
+    if(q&&!featureLabel(f).toLowerCase().includes(q)&&!(getAName(f.alliance)||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  filtered.sort((a,b)=>{const o={fortress:0,sanctuary:1,outpost:2};return(o[a.cat]||2)-(o[b.cat]||2)||(a.x-b.x);});
+  filtered.forEach(f=>{
+    const row=document.createElement('div');row.className='trow'+(f.id===highlightId?' highlighted':'');
+    const nameCol=document.createElement('div');
+    // Show icon in table too
+    const imgEl=f.cat==='outpost'&&IMG_CACHE[f.k]?`<img src="${ASSETS[f.k]}" style="width:12px;height:12px;object-fit:contain;border-radius:2px;margin-right:4px;vertical-align:middle">`:'';
+    nameCol.innerHTML=`<div class="trow-name">${imgEl}${featureLabel(f)}</div><div class="trow-coord">X${f.x}, Y${f.y}</div>`;row.appendChild(nameCol);
+    const ownerCol=document.createElement('div');ownerCol.className='trow-owner';
+    const aColor=getAColor(f.alliance);const aName=getAName(f.alliance);
+    if(aColor){const d=document.createElement('span');d.className='owner-dot';d.style.background=aColor;ownerCol.appendChild(d);}
+    const nspan=document.createElement('span');nspan.className='trow-badge';
+    nspan.style.cssText=aColor?`background:${aColor}22;color:${aColor};border:1px solid ${aColor}44`:'background:#1c2230;color:#4a5568;border:1px solid #2a3550';
+    nspan.textContent=aName||'—';ownerCol.appendChild(nspan);row.appendChild(ownerCol);
+    const typeCol=document.createElement('div');const tb=document.createElement('span');tb.className='trow-badge';
+    const fc=featureColor(f);tb.style.cssText=`background:${fc}22;color:${fc};border:1px solid ${fc}44`;
+    tb.textContent=f.cat==='fortress'?'Fort':f.cat==='sanctuary'?'Sanct':(TYPES[f.k]?.short||'?');typeCol.appendChild(tb);row.appendChild(typeCol);
+    row.onclick=()=>assignFeature(f.id);
+    row.oncontextmenu=e=>{e.preventDefault();showCtxMenu(e.clientX,e.clientY,f.id);};
+    body.appendChild(row);
+  });
+}
+
+function assignFeature(fid){
+  const f=allFeatures.find(x=>x.id===fid);if(!f||f.cat==='castle')return;
+  if(!alliances.length){alert('Add an alliance first.');return;}
+  f.alliance=f.alliance===selA?null:selA;
+  draw();renderTable();buildAllianceList();buildStats();save();
+}
+
+function showCtxMenu(mx,my,fid){
+  const menu=document.getElementById('ctxMenu');menu.innerHTML='';
+  const f=allFeatures.find(x=>x.id===fid);if(!f||f.cat==='castle'){menu.style.display='none';return;}
+  const title=document.createElement('div');title.style.cssText='padding:7px 14px 4px;font-size:10px;color:#4a5568;letter-spacing:2px;text-transform:uppercase;font-family:"IBM Plex Mono",monospace';title.textContent=featureLabel(f).substring(0,24);menu.appendChild(title);
+  menu.appendChild(Object.assign(document.createElement('div'),{className:'ctx-divider'}));
+  alliances.forEach((a,i)=>{
+    const item=document.createElement('div');item.className='ctx-item';
+    const sw=document.createElement('span');sw.className='ctx-swatch';sw.style.background=a.hex;item.appendChild(sw);
+    const lbl=document.createElement('span');lbl.textContent=a.name||`Alliance ${i+1}`;item.appendChild(lbl);
+    if(f.alliance===i){const chk=document.createElement('span');chk.textContent='✓';chk.style.cssText='margin-left:auto;color:'+a.hex;item.appendChild(chk);}
+    item.onclick=()=>{f.alliance=f.alliance===i?null:i;draw();renderTable();buildAllianceList();buildStats();save();menu.style.display='none';};
+    menu.appendChild(item);
+  });
+  menu.appendChild(Object.assign(document.createElement('div'),{className:'ctx-divider'}));
+  const unassign=document.createElement('div');unassign.className='ctx-item ctx-unassign';unassign.textContent='Remove ownership';
+  unassign.onclick=()=>{f.alliance=null;draw();renderTable();buildAllianceList();buildStats();save();menu.style.display='none';};
+  menu.appendChild(unassign);
+  menu.style.display='block';
+  setTimeout(()=>{
+    menu.style.left=Math.min(mx,window.innerWidth-menu.offsetWidth-10)+'px';
+    menu.style.top=Math.min(my,window.innerHeight-menu.offsetHeight-10)+'px';
+  },0);
+}
+document.addEventListener('click',()=>document.getElementById('ctxMenu').style.display='none');
+
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();const sx=CW/rect.width,sy=CH/rect.height;
+  const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+  const tip=document.getElementById('mapTip');let hit=null;
+  allFeatures.forEach(f=>{if(f.cat!=='castle'&&!activeFilters.has(f.cat))return;const{cx,cy}=toC(f.x,f.y);if(Math.hypot(mx-cx,my-cy)<getR(f)+6)hit=f;});
+  if(hit){
+    const aName=getAName(hit.alliance)||'Unowned';const aColor=getAColor(hit.alliance);
+    const bonus=hit.cat==='outpost'?getBonusText(hit):'';
+    tip.style.display='block';const wr=document.getElementById('mapPane').getBoundingClientRect();
+    let tx=e.clientX-wr.left+14,ty=e.clientY-wr.top-44;if(tx>wr.width-200)tx-=200;if(ty<0)ty=10;
+    tip.style.left=tx+'px';tip.style.top=ty+'px';
+    tip.innerHTML=`<b>${featureLabel(hit)}</b><br>X${hit.x}, Y${hit.y}&emsp;<span style="color:${aColor||'#4a5568'}">${aName}</span>${bonus?`<br><span style="color:var(--text3)">${bonus}</span>`:''}`;
+  }else tip.style.display='none';
+});
+canvas.addEventListener('mouseleave',()=>document.getElementById('mapTip').style.display='none');
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();const sx=CW/rect.width,sy=CH/rect.height;
+  const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+  let hit=null,bestD=Infinity;
+  allFeatures.forEach(f=>{if(f.cat!=='castle'&&!activeFilters.has(f.cat))return;const{cx,cy}=toC(f.x,f.y);const d=Math.hypot(mx-cx,my-cy);if(d<getR(f)+8&&d<bestD){bestD=d;hit=f;}});
+  if(hit&&hit.cat!=='castle'){highlightId=hit.id;assignFeature(hit.id);}
+});
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();const rect=canvas.getBoundingClientRect();const sx=CW/rect.width,sy=CH/rect.height;
+  const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+  let hit=null,bestD=Infinity;
+  allFeatures.forEach(f=>{const{cx,cy}=toC(f.x,f.y);const d=Math.hypot(mx-cx,my-cy);if(d<getR(f)+8&&d<bestD){bestD=d;hit=f;}});
+  if(hit)showCtxMenu(e.clientX,e.clientY,hit.id);
+});
+
+function getBonusText(f){
+  if(f.cat!=='outpost')return'';
+  const bonuses={
+    construction:'Construction Speed',research:'Research Speed',training:'Training Speed',
+    production:'Resource Production',gathering:'Gathering Speed',frontier:'March Speed',
+    attack:'Attack Bonus',defense:'Defense Bonus'
+  };
+  const pcts={1:'+5%',2:'+5%',3:'+8%',4:'+10%'};
+  return`${bonuses[f.k]||''} ${pcts[f.lv]||''}`;
+}
+
+function setView(mode){
+  viewMode=mode;
+  ['map','split','table'].forEach(m=>document.getElementById('view'+m.charAt(0).toUpperCase()+m.slice(1)).className='view-btn'+(mode===m?' on':''));
+  document.getElementById('mapPane').style.display=mode==='table'?'none':'flex';
+  document.getElementById('tablePane').style.display=mode==='map'?'none':'block';
+  if(mode!=='table')setTimeout(()=>{resizeCanvas();draw();},50);
+}
+document.getElementById('viewMap').onclick=()=>setView('map');
+document.getElementById('viewSplit').onclick=()=>setView('split');
+document.getElementById('viewTable').onclick=()=>setView('table');
+document.getElementById('resetBtn').onclick=()=>{if(confirm('Reset all ownership? Cannot be undone.')){allFeatures.forEach(f=>f.alliance=null);draw();renderTable();buildAllianceList();buildStats();save();}};
+document.getElementById('addAllianceBtn').onclick=()=>{const idx=alliances.length%ALLIANCE_COLORS.length;alliances.push({name:`Alliance ${alliances.length+1}`,hex:ALLIANCE_COLORS[idx]});selA=alliances.length-1;buildAllianceList();buildStats();save();};
+document.getElementById('searchInp').oninput=e=>{searchQ=e.target.value;renderTable();};
+window.addEventListener('resize',()=>{if(viewMode!=='table'){resizeCanvas();draw();}});
+
+// Redraw when images load
+OUTPOST_TYPE_KEYS.forEach(k=>{IMG_CACHE[k].onload=()=>draw();});
+
+(async()=>{await load();resizeCanvas();buildAllianceList();buildFilters();buildLegend();buildStats();draw();renderTable();})();
+</script>
