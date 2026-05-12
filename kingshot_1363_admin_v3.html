@@ -71,12 +71,13 @@ body {
   opacity: 0; transition: opacity 0.4s;
 }
 .saved-badge.show { opacity: 1; background: #1a3a20; color: var(--green); border: 1px solid #2d5a30; }
-.toggle-sidebar-btn {
-  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
-  cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 14px;
-  padding: 3px 8px; border-radius: 4px; margin-left: 8px; transition: all 0.15s;
+.sidebar-btn {
+  font-size: 11px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border);
+  background: transparent; color: var(--text2); cursor: pointer;
+  font-family: 'Rajdhani', sans-serif; font-weight: 600; letter-spacing: 1px; transition: all 0.15s;
 }
-.toggle-sidebar-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.sidebar-btn:hover { border-color: var(--border2); color: var(--text); }
+.sidebar-btn.on { background: var(--bg4); border-color: var(--border2); color: var(--gold); }
 .sidebar-hidden .sidebar { display: none !important; }
 .sidebar-hidden .content { display: block !important; }
 .sidebar-hidden .content > .map-pane { width: 100% !important; flex: 1 1 100% !important; }
@@ -246,7 +247,7 @@ body {
 <div class="header">
   <span class="header-crown">♛</span>
   <span class="header-title">Server 1363 — Admin</span>
-  <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span><button class="toggle-sidebar-btn" id="toggleSidebar" title="Toggle sidebar">◀</button>
+  <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span>
   <span class="saved-badge" id="savedBadge">✓ Saved</span>
 </div>
 
@@ -281,6 +282,8 @@ body {
       <button class="view-btn on" id="viewMap">Map</button>
       <button class="view-btn"    id="viewSplit">Map + Table</button>
       <button class="view-btn"    id="viewTable">Table only</button>
+      <div class="toolbar-sep"></div>
+      <button class="sidebar-btn on" id="sidebarBtn">Sidebar ON</button>
       <div class="toolbar-sep"></div>
       <span class="toolbar-label">Zoom:</span>
       <button class="zoom-btn" id="zoomIn"    title="Zoom in">＋</button>
@@ -1916,25 +1919,23 @@ async function init() {
   initContextMenu();
 
   // ── Sidebar toggle ──
+let sidebarVisible = true;
 let sidebarWasInSplit = false;
-document.getElementById('toggleSidebar').addEventListener('click', () => {
+const sidebarBtn = document.getElementById('sidebarBtn');
+sidebarBtn.addEventListener('click', () => {
+  sidebarVisible = !sidebarVisible;
   const layout = document.querySelector('.layout');
-  const sidebar = document.querySelector('.sidebar');
-  const isHidden = layout.classList.toggle('sidebar-hidden');
-  const btn = document.getElementById('toggleSidebar');
-  btn.textContent = isHidden ? '▶' : '◀';
-  if (isHidden) {
-    // Save current view mode, switch to map-only
+  layout.classList.toggle('sidebar-hidden', !sidebarVisible);
+  sidebarBtn.textContent = sidebarVisible ? 'Sidebar ON' : 'Sidebar OFF';
+  sidebarBtn.classList.toggle('on', sidebarVisible);
+  if (!sidebarVisible) {
     sidebarWasInSplit = viewMode === 'split';
     setViewMode('map');
   } else {
-    // Restore: if table was visible before, go back to split
-    if (sidebarWasInSplit) {
-      setViewMode('split');
-    } else {
-      setViewMode('map');
-    }
+    if (sidebarWasInSplit) setViewMode('split');
+    else setViewMode('map');
   }
+  render();
 });
 
 // ── View mode buttons ──
