@@ -71,16 +71,7 @@ body {
   opacity: 0; transition: opacity 0.4s;
 }
 .saved-badge.show { opacity: 1; background: #1a3a20; color: var(--green); border: 1px solid #2d5a30; }
-.toggle-sidebar-btn {
-  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
-  cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 14px;
-  padding: 3px 8px; border-radius: 4px; margin-left: 8px; transition: all 0.15s;
-}
-.toggle-sidebar-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
-.sidebar-hidden .sidebar { display: none !important; }
-.sidebar-hidden .content { display: block !important; }
-.sidebar-hidden .content > .map-pane { width: 100% !important; flex: 1 1 100% !important; }
-.sidebar-hidden .content > .table-pane { display: none !important; }
+
 
 /* ═══════════════════════════════════════════
    MAIN LAYOUT — sidebar + content column
@@ -139,6 +130,28 @@ body {
 .br-bar      { height: 100%; border-radius: 2px; }
 
 /* Add alliance button */
+/* Alliance visibility toggle */
+.a-toggle {
+  font-size: 12px; color: var(--text3); cursor: pointer;
+  padding: 1px 4px; border-radius: 3px; border: 1px solid transparent;
+  transition: all 0.15s; user-select: none;
+}
+.a-toggle:hover { border-color: var(--border2); color: var(--text); }
+.a-toggle.hidden { color: var(--text3); opacity: 0.35; text-decoration: line-through; }
+
+/* Table type filters */
+.table-type-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.table-type-btn {
+  font-size: 9px; padding: 2px 6px; border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace; font-weight: 500;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text2); cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.5px;
+}
+.table-type-btn:hover { border-color: var(--border2); color: var(--text); }
+.table-type-btn.off { opacity: 0.3; border-color: var(--border); color: var(--text3); background: transparent; }
+.table-type-btn.on { border-color: var(--gold-dim); background: rgba(232,200,74,0.08); color: var(--gold); }
+.table-type-btn .tbl-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 3px; flex-shrink: 0; }
 .add-alliance-btn { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 6px; border: 1px dashed var(--border); color: var(--text3); cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 500; transition: all 0.15s; width: 100%; background: transparent; }
 .add-alliance-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
@@ -246,7 +259,7 @@ body {
 <div class="header">
   <span class="header-crown">♛</span>
   <span class="header-title">Server 1363 — Admin</span>
-  <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span><button class="toggle-sidebar-btn" id="toggleSidebar" title="Toggle sidebar">◀</button>
+  <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span>
   <span class="saved-badge" id="savedBadge">✓ Saved</span>
 </div>
 
@@ -279,6 +292,7 @@ body {
     <div class="toolbar">
       <span class="toolbar-label">View:</span>
       <button class="view-btn on" id="viewMap">Map</button>
+      <button class="view-btn"    id="viewAlliance">Map + Alliance</button>
       <button class="view-btn"    id="viewSplit">Map + Table</button>
       <button class="view-btn"    id="viewTable">Table only</button>
       <div class="toolbar-sep"></div>
@@ -298,6 +312,7 @@ body {
       </div>
       <!-- Table view (hidden by default) -->
       <div class="table-pane" id="tablePane" style="display:none">
+        <div class="table-type-filters" id="tableTypeFilters"></div>
         <div class="table-head"><span>Building</span><span>Owner</span><span>Type</span></div>
         <div class="search-wrap">
           <input class="search-inp" id="searchInp" placeholder="Search buildings…">
@@ -491,7 +506,7 @@ const FORTRESSES = [
  * Each feature carries: id, cat, k, lv, x, y, n (name for special), alliance (null = unowned).
  */
 const allFeatures = [
-  ...RAW.map((o,i)  => ({ ...o, id:'op'+i,   cat:'outpost',   alliance:o.owner ?? null, n: TYPES[o.k].name+' Lv.'+o.lv })),
+  ...RAW.map((o,i)  => ({ ...o, id:'op'+i,   cat:'outpost',   alliance:null, n: TYPES[o.k].name+' Lv.'+o.lv })),
   ...SANCTUARIES.map((s,i) => ({ ...s, id:'san'+i,  cat:'sanctuary', alliance:null, k:'sanctuary', lv:null })),
   ...FORTRESSES.map((f,i)  => ({ ...f, id:'fort'+i, cat:'fortress',  alliance:null, k:'fortress',  lv:null })),
   // King's Castle — centre of the map at X600, Y600
@@ -568,6 +583,12 @@ let selA = 0;
 
 /** Active filter categories (shown on map). */
 let activeFilters = new Set(['outpost', 'sanctuary', 'fortress']);
+
+/** Alliance indices hidden from the map. */
+let hiddenAlliances = new Set();
+
+/** Active outpost types shown in the table. */
+let activeTableTypes = new Set([...OUTPOST_TYPE_KEYS, 'sanctuary', 'fortress']);
 
 /** Current view mode: 'map' | 'split' | 'table' */
 let viewMode = 'map';
@@ -1006,9 +1027,19 @@ function _render() {
   // 2. Feature markers
   allFeatures.forEach(f => {
     // Respect visibility filters
-    if (f.cat === 'outpost'   && !activeFilters.has('outpost'))   return;
-    if (f.cat === 'sanctuary' && !activeFilters.has('sanctuary')) return;
-    if (f.cat === 'fortress'  && !activeFilters.has('fortress'))  return;
+    if (f.cat === 'outpost') {
+      if (!activeFilters.has('outpost')) return;
+      if (!activeTableTypes.has(f.k)) return;
+      if (f.alliance !== null && hiddenAlliances.has(f.alliance)) return;
+    }
+    if (f.cat === 'sanctuary') {
+      if (!activeFilters.has('sanctuary')) return;
+      if (!activeTableTypes.has('sanctuary')) return;
+    }
+    if (f.cat === 'fortress') {
+      if (!activeFilters.has('fortress')) return;
+      if (!activeTableTypes.has('fortress')) return;
+    }
 
     const { sx, sy } = gameToIso(f.x, f.y);
     const r          = getR(f) * Math.max(0.6, Math.min(zoom, 1.8)); // slightly scale markers with zoom
@@ -1038,9 +1069,19 @@ function featureAtPixel(px, py) {
   // Iterate in reverse so topmost-drawn (castle, fortress, sanctuary) wins
   for (let i = allFeatures.length - 1; i >= 0; i--) {
     const f = allFeatures[i];
-    if (f.cat === 'outpost'   && !activeFilters.has('outpost'))   continue;
-    if (f.cat === 'sanctuary' && !activeFilters.has('sanctuary')) continue;
-    if (f.cat === 'fortress'  && !activeFilters.has('fortress'))  continue;
+    if (f.cat === 'outpost') {
+      if (!activeFilters.has('outpost')) continue;
+      if (!activeTableTypes.has(f.k)) continue;
+      if (f.alliance !== null && hiddenAlliances.has(f.alliance)) continue;
+    }
+    if (f.cat === 'sanctuary') {
+      if (!activeFilters.has('sanctuary')) continue;
+      if (!activeTableTypes.has('sanctuary')) continue;
+    }
+    if (f.cat === 'fortress') {
+      if (!activeFilters.has('fortress')) continue;
+      if (!activeTableTypes.has('fortress')) continue;
+    }
 
     const { sx, sy } = gameToIso(f.x, f.y);
     const r         = (getR(f) + 4) * Math.max(0.6, Math.min(zoom, 1.8)); // generous hit radius
@@ -1256,7 +1297,7 @@ function showContextMenu(cx, cy, feat) {
       feat.alliance = i;
       hideContextMenu();
       save();
-      renderSidebar();
+            renderSidebar();
       renderTable();
       render();
     });
@@ -1276,7 +1317,7 @@ function showContextMenu(cx, cy, feat) {
       feat.alliance = null;
       hideContextMenu();
       save();
-      renderSidebar();
+            renderSidebar();
       renderTable();
       render();
     });
@@ -1489,7 +1530,18 @@ function renderAllianceList() {
       save(); renderSidebar(); renderTable(); render();
     });
 
-    hdr.append(sw, bsw, inp, del);
+    const tog = document.createElement('span');
+    tog.className = 'a-toggle' + (hiddenAlliances.has(ai) ? ' hidden' : '');
+    tog.textContent = '👁';
+    tog.title = 'Toggle alliance visibility on map';
+    tog.addEventListener('click', e => {
+      e.stopPropagation();
+      if (hiddenAlliances.has(ai)) hiddenAlliances.delete(ai);
+      else hiddenAlliances.add(ai);
+      render();
+      renderAllianceList();
+    });
+    hdr.append(sw, bsw, tog, inp, del);
     card.appendChild(hdr);
 
     // ── Outpost count bar ──
@@ -1627,7 +1679,7 @@ function renderStats() {
 }
 
 /**
- * Render the filter-by-type toggle buttons.
+ * Render the filter-by-type toggle buttons (sidebar map filter).
  */
 function renderFilters() {
   const wrap = document.getElementById('filterBtns');
@@ -1649,6 +1701,83 @@ function renderFilters() {
     });
     wrap.appendChild(btn);
   });
+}
+
+/**
+ * Render the outpost type filter buttons for the table.
+ */
+function renderTableFilters() {
+  const wrap = document.getElementById('tableTypeFilters');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Outpost type filters
+  OUTPOST_TYPE_KEYS.forEach(k => {
+    const t = TYPES[k];
+    const btn = document.createElement('button');
+    btn.className = 'table-type-btn' + (activeTableTypes.has(k) ? ' on' : ' off');
+    const dot = document.createElement('span');
+    dot.className = 'tbl-dot';
+    dot.style.background = t.color;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(t.short));
+    btn.title = t.name;
+    btn.addEventListener('click', () => {
+      if (activeTableTypes.has(k)) activeTableTypes.delete(k);
+      else activeTableTypes.add(k);
+      btn.classList.toggle('on');
+      btn.classList.toggle('off');
+      renderTable();
+      render();
+      save();
+    });
+    wrap.appendChild(btn);
+  });
+
+  // Separator
+  const sep = document.createElement('span');
+  sep.style.cssText = 'display:inline-block;width:1px;height:16px;background:var(--border);margin:0 4px;vertical-align:middle';
+  wrap.appendChild(sep);
+
+  // Sanctuary filter
+  const sBtn = document.createElement('button');
+  sBtn.className = 'table-type-btn' + (activeTableTypes.has('sanctuary') ? ' on' : ' off');
+  const sDot = document.createElement('span');
+  sDot.className = 'tbl-dot';
+  sDot.style.background = '#58a6ff';
+  sBtn.appendChild(sDot);
+  sBtn.appendChild(document.createTextNode('Sanct.'));
+  sBtn.title = 'Sanctuary';
+  sBtn.addEventListener('click', () => {
+    if (activeTableTypes.has('sanctuary')) activeTableTypes.delete('sanctuary');
+    else activeTableTypes.add('sanctuary');
+    sBtn.classList.toggle('on');
+    sBtn.classList.toggle('off');
+    renderTable();
+    render();
+    save();
+  });
+  wrap.appendChild(sBtn);
+
+  // Fortress filter
+  const fBtn = document.createElement('button');
+  fBtn.className = 'table-type-btn' + (activeTableTypes.has('fortress') ? ' on' : ' off');
+  const fDot = document.createElement('span');
+  fDot.className = 'tbl-dot';
+  fDot.style.background = '#bc8cff';
+  fBtn.appendChild(fDot);
+  fBtn.appendChild(document.createTextNode('Fort.'));
+  fBtn.title = 'Fortress';
+  fBtn.addEventListener('click', () => {
+    if (activeTableTypes.has('fortress')) activeTableTypes.delete('fortress');
+    else activeTableTypes.add('fortress');
+    fBtn.classList.toggle('on');
+    fBtn.classList.toggle('off');
+    renderTable();
+    render();
+    save();
+  });
+  wrap.appendChild(fBtn);
 }
 
 /**
@@ -1703,6 +1832,7 @@ function renderTable() {
 
   const q       = searchQ.toLowerCase();
   const visible = allFeatures.filter(f => {
+    if (!activeTableTypes.has(f.k)) return false;
     if (!q) return true;
     const name = (f.n || f.k).toLowerCase();
     const owner = f.alliance !== null ? (alliances[f.alliance]?.name || '').toLowerCase() : '';
@@ -1770,9 +1900,7 @@ function renderTable() {
   });
 }
 
-/**
- * Wire up the search input to filter the table.
- */
+/** Wire up the search input to filter the table. */
 function initSearch() {
   const inp = document.getElementById('searchInp');
   if (!inp) return;
@@ -1789,26 +1917,54 @@ function initSearch() {
 
 /**
  * Apply a new view mode to layout, show/hide panes as needed.
- * @param {'map'|'split'|'table'} mode
+ * @param {'map'|'alliance'|'split'|'table'} mode
+ * @param {boolean} [skipSave] - true during init to avoid premature save
  */
-function setViewMode(mode) {
+function setViewMode(mode, skipSave) {
   viewMode = mode;
   const mapPane   = document.getElementById('mapPane');
   const tablePane = document.getElementById('tablePane');
+  const sidebar   = document.querySelector('.sidebar');
+  const layout    = document.querySelector('.layout');
 
-  mapPane  .style.display = (mode !== 'table') ? 'block' : 'none';
-  tablePane.style.display = (mode !== 'map')   ? 'block' : 'none';
-
-  // In split mode, map and table share space
-  if (mode === 'split') {
-    mapPane.style.display = '';   // flex item
+  // Show/hide sidebar and panes per mode
+  switch (mode) {
+    case 'map':
+      sidebar.style.display = 'none';
+      mapPane.style.display  = '';
+      tablePane.style.display = 'none';
+      layout.style.gridTemplateColumns = '1fr';
+      break;
+    case 'alliance':
+      sidebar.style.display = '';
+      mapPane.style.display  = '';
+      tablePane.style.display = 'none';
+      layout.style.gridTemplateColumns = '280px 1fr';
+      break;
+    case 'split':
+      sidebar.style.display = 'none';
+      mapPane.style.display  = '';
+      tablePane.style.display = '';
+      layout.style.gridTemplateColumns = '1fr';
+      break;
+    case 'table':
+      sidebar.style.display = 'none';
+      mapPane.style.display  = 'none';
+      tablePane.style.display = '';
+      layout.style.gridTemplateColumns = '1fr';
+      break;
   }
 
+  if (!skipSave) save();
+
   // Update toolbar button states
-  ['viewMap','viewSplit','viewTable'].forEach(id => {
+  ['viewMap','viewAlliance','viewSplit','viewTable'].forEach(id => {
     document.getElementById(id).classList.remove('on');
   });
-  const activeId = mode === 'map' ? 'viewMap' : mode === 'split' ? 'viewSplit' : 'viewTable';
+  const activeId = mode === 'map' ? 'viewMap'
+                 : mode === 'alliance' ? 'viewAlliance'
+                 : mode === 'split' ? 'viewSplit'
+                 : 'viewTable';
   document.getElementById(activeId).classList.add('on');
 
   render(); // re-render canvas (size may have changed)
@@ -1829,7 +1985,10 @@ async function save() {
       ownership: allFeatures.reduce((acc, f) => {
         if (f.alliance !== null) acc[f.id] = f.alliance;
         return acc;
-      }, {})
+      }, {}),
+      hidden: [...hiddenAlliances],
+      tableTypes: [...activeTableTypes],
+      viewMode, zoom, panX, panY
     };
     const json = JSON.stringify(data);
 
@@ -1874,6 +2033,12 @@ async function load() {
           if (data.ownership[f.id] !== undefined) f.alliance = data.ownership[f.id];
         });
       }
+      if (data.hidden?.length) data.hidden.forEach(i => hiddenAlliances.add(i));
+      if (data.tableTypes?.length) activeTableTypes = new Set(data.tableTypes);
+      if (data.viewMode) viewMode = data.viewMode;
+      if (typeof data.zoom === 'number') zoom = data.zoom;
+      if (typeof data.panX === 'number') panX = data.panX;
+      if (typeof data.panY === 'number') panY = data.panY;
     }
   } catch (e) {
     console.warn('Load failed:', e);
@@ -1887,6 +2052,9 @@ async function load() {
   alliances.forEach((a, i) => {
     if (!a.border) a.border = ALLIANCE_BORDER_COLORS[i % ALLIANCE_BORDER_COLORS.length];
   });
+
+  // Clamp hidden alliance indices to valid range (in case alliances were deleted)
+  hiddenAlliances = new Set([...hiddenAlliances].filter(i => i >= 0 && i < alliances.length));
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1915,27 +2083,11 @@ async function init() {
   // ── Context menu ──
   initContextMenu();
 
-  // ── Sidebar toggle ──
-let sidebarWasInSplit = false;
-document.getElementById('toggleSidebar').addEventListener('click', () => {
-  const layout = document.querySelector('.layout');
-  const sidebar = document.querySelector('.sidebar');
-  const isHidden = layout.classList.toggle('sidebar-hidden');
-  const btn = document.getElementById('toggleSidebar');
-  btn.textContent = isHidden ? '▶' : '◀';
-  if (isHidden) {
-    sidebarWasInSplit = viewMode === 'split';
-    setViewMode('map');
-  } else {
-    if (sidebarWasInSplit) setViewMode('split');
-    else setViewMode('map');
-  }
-});
-
-// ── View mode buttons ──
-  document.getElementById('viewMap').addEventListener('click',   () => setViewMode('map'));
-  document.getElementById('viewSplit').addEventListener('click', () => setViewMode('split'));
-  document.getElementById('viewTable').addEventListener('click', () => setViewMode('table'));
+  // ── View mode buttons ──
+  document.getElementById('viewMap').addEventListener('click',      () => setViewMode('map'));
+  document.getElementById('viewAlliance').addEventListener('click', () => setViewMode('alliance'));
+  document.getElementById('viewSplit').addEventListener('click',    () => setViewMode('split'));
+  document.getElementById('viewTable').addEventListener('click',    () => setViewMode('table'));
 
   // ── Add alliance ──
   document.getElementById('addAllianceBtn').addEventListener('click', () => {
@@ -1945,24 +2097,41 @@ document.getElementById('toggleSidebar').addEventListener('click', () => {
     alliances.push({ name: 'Alliance ' + (alliances.length + 1), hex, border });
     selA = alliances.length - 1;
     save();
-    renderSidebar();
+    renderAllianceList();
+    render();
   });
 
   // ── Reset all ──
   document.getElementById('resetBtn').addEventListener('click', () => {
     if (!confirm('Reset ALL ownership data? This cannot be undone.')) return;
     allFeatures.forEach(f => { f.alliance = null; });
+    hiddenAlliances.clear();
+    activeTableTypes = new Set(OUTPOST_TYPE_KEYS);
+    viewMode = 'map';
+    zoom = 1.0;
+    panX = 0;
+    panY = 0;
     save();
+    setViewMode('map');
     renderSidebar();
+    renderTableFilters();
     renderTable();
+    updateZoomLabel();
     render();
   });
 
   // ── Search ──
   initSearch();
 
+  // Remove any leftover sidebar-hidden class that could block alliance view
+  document.querySelector('.layout').classList.remove('sidebar-hidden');
+
+  // Apply saved view mode before painting
+  setViewMode(viewMode, true);
+
   // ── Initial UI paint ──
-  renderSidebar();
+    renderTableFilters();
+    renderSidebar();
   renderTable();
   updateZoomLabel();
   render();
