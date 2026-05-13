@@ -65,6 +65,7 @@ body {
 .header-crown { font-size: 20px; filter: drop-shadow(0 0 8px var(--gold)); }
 .header-title  { font-size: 19px; font-weight: 700; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
 .header-sub    { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; margin-left: auto; }
+.header-ts     { font-size: 11px; color: var(--gold2); font-family: 'IBM Plex Mono', monospace; margin-left: auto; opacity: 0.85; }
 .saved-badge {
   font-size: 10px; padding: 2px 8px; border-radius: 3px;
   font-family: 'IBM Plex Mono', monospace; margin-left: 8px;
@@ -248,6 +249,7 @@ body {
   <span class="header-crown">♛</span>
   <span class="header-title">Server 1363 — Admin</span>
   <span class="header-sub">Ownership Control Panel · v4 (Isometric)</span>
+  <span class="header-ts" id="lastChange"></span>
   <span class="saved-badge" id="savedBadge">✓ Saved</span>
 </div>
 
@@ -595,6 +597,9 @@ let panStartY   = 0;
 
 // ── Context menu target ──
 let ctxFeature  = null;   // feature the ctx menu was opened on
+
+// ── Last change timestamp ──
+let lastChangeTimestamp = null;
 
 // ── Canvas dimensions ──
 let CW = 600, CH = 600;
@@ -1258,6 +1263,7 @@ function showContextMenu(cx, cy, feat) {
     item.addEventListener('click', () => {
       feat.alliance = i;
       hideContextMenu();
+      lastChangeTimestamp = Date.now();
       save();
       renderSidebar();
       renderTable();
@@ -1278,6 +1284,7 @@ function showContextMenu(cx, cy, feat) {
     del.addEventListener('click', () => {
       feat.alliance = null;
       hideContextMenu();
+      lastChangeTimestamp = Date.now();
       save();
       renderSidebar();
       renderTable();
@@ -1832,7 +1839,8 @@ async function save() {
       ownership: allFeatures.reduce((acc, f) => {
         if (f.alliance !== null) acc[f.id] = f.alliance;
         return acc;
-      }, {})
+      }, {}),
+      lastChangeTimestamp
     };
     const json = JSON.stringify(data);
 
@@ -1877,6 +1885,10 @@ async function load() {
           if (data.ownership[f.id] !== undefined) f.alliance = data.ownership[f.id];
         });
       }
+      if (data.lastChangeTimestamp) {
+        lastChangeTimestamp = data.lastChangeTimestamp;
+        updateLastChangeLabel();
+      }
     }
   } catch (e) {
     console.warn('Load failed:', e);
@@ -1886,6 +1898,20 @@ async function load() {
   if (!alliances.length) {
     alliances = [{ name: 'Alliance 1', hex: ALLIANCE_COLORS[0], border: ALLIANCE_BORDER_COLORS[0] }];
   }
+
+  // ── Last change timestamp helper ──
+  function updateLastChangeLabel() {
+    const el = document.getElementById('lastChange');
+    if (!el) return;
+    if (lastChangeTimestamp) {
+      const d = new Date(lastChangeTimestamp);
+      const pad = n => String(n).padStart(2, '0');
+      el.textContent = `Last change: ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    } else {
+      el.textContent = '';
+    }
+  }
+  updateLastChangeLabel();
   // Back-fill border for alliances saved before this feature existed
   alliances.forEach((a, i) => {
     if (!a.border) a.border = ALLIANCE_BORDER_COLORS[i % ALLIANCE_BORDER_COLORS.length];
