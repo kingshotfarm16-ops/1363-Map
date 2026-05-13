@@ -1,0 +1,2168 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server 1363 — Arakiel's Map V5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   BASE RESET & CSS CUSTOM PROPERTIES
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Background palette — dark navy theme */
+  --bg:     #0d1117;
+  --bg2:    #161b22;
+  --bg3:    #1c2230;
+  --bg4:    #21283a;
+  /* Border shades */
+  --border:  #2a3550;
+  --border2: #3a4870;
+  /* Brand gold */
+  --gold:     #e8c84a;
+  --gold2:    #f5d96a;
+  --gold-dim: #7a6520;
+  /* Text hierarchy */
+  --text:  #c9d1d9;
+  --text2: #8b949e;
+  --text3: #4a5568;
+  /* Semantic colours */
+  --blue:   #58a6ff;
+  --purple: #bc8cff;
+  --red:    #f85149;
+  --green:  #3fb950;
+  --orange: #d29922;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  overflow: hidden; /* prevent body scroll when map fills viewport */
+}
+
+/* ═══════════════════════════════════════════
+   HEADER BAR
+   ═══════════════════════════════════════════ */
+.header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  flex-shrink: 0;
+}
+.header-crown { font-size: 20px; filter: drop-shadow(0 0 8px var(--gold)); }
+.header-title  { font-size: 19px; font-weight: 700; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+.header-sub    { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; margin-left: auto; }
+.header-ts     { font-size: 11px; color: var(--gold2); font-family: 'IBM Plex Mono', monospace; margin-left: auto; opacity: 0.85; }
+.saved-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace; margin-left: 8px;
+  opacity: 0; transition: opacity 0.4s;
+}
+.saved-badge.show { opacity: 1; background: #1a3a20; color: var(--green); border: 1px solid #2d5a30; }
+
+
+/* ═══════════════════════════════════════════
+   MAIN LAYOUT — sidebar + content column
+   ═══════════════════════════════════════════ */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: calc(100vh - 46px);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-section   { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.sidebar-label     { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-family: 'IBM Plex Mono', monospace; margin-bottom: 8px; }
+
+/* Alliance card */
+.alliance-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
+.alliance-card:hover, .alliance-card.active { border-color: var(--border2); }
+.alliance-card-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.a-swatch     { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.a-name-inp   { background: transparent; border: none; outline: none; color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700; flex: 1; min-width: 0; }
+.a-name-inp::placeholder { color: var(--text3); }
+.a-del        { font-size: 14px; color: var(--text3); cursor: pointer; padding: 0 2px; line-height: 1; opacity: 0; transition: opacity 0.15s; }
+.alliance-card:hover .a-del { opacity: 1; }
+.a-del:hover  { color: var(--red); }
+
+/* Count bar */
+.op-count-row     { display: flex; align-items: center; gap: 8px; padding: 0 10px 6px; font-size: 11px; color: var(--text2); }
+.op-count-num     { font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 500; }
+.op-count-bar-wrap{ flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.op-count-bar     { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+/* Missing types */
+.missing-section { padding: 6px 10px 8px; }
+.missing-title   { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-family: 'IBM Plex Mono', monospace; margin-bottom: 5px; }
+.missing-grid    { display: flex; flex-wrap: wrap; gap: 3px; }
+.type-chip       { font-size: 9px; padding: 2px 6px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; letter-spacing: 0.5px; display: flex; align-items: center; gap: 3px; }
+.type-chip.have    { opacity: 0.35; }
+.type-chip.missing { opacity: 1; }
+.chip-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* Breakdown */
+.breakdown-section { padding: 0 10px 8px; }
+.breakdown-title   { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-family: 'IBM Plex Mono', monospace; margin-bottom: 5px; }
+.breakdown-row     { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.br-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.br-name { font-size: 11px; color: var(--text2); flex: 1; }
+.br-val  { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--text); }
+.br-bar-wrap { width: 40px; height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.br-bar      { height: 100%; border-radius: 2px; }
+
+/* Add alliance button */
+/* Alliance visibility toggle */
+.a-toggle {
+  font-size: 12px; color: var(--text3); cursor: pointer;
+  padding: 1px 4px; border-radius: 3px; border: 1px solid transparent;
+  transition: all 0.15s; user-select: none;
+}
+.a-toggle:hover { border-color: var(--border2); color: var(--text); }
+.a-toggle.hidden { color: var(--text3); opacity: 0.35; text-decoration: line-through; }
+
+/* Table type filters */
+.table-type-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.table-type-btn {
+  font-size: 9px; padding: 2px 6px; border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace; font-weight: 500;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text2); cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.5px;
+}
+.table-type-btn:hover { border-color: var(--border2); color: var(--text); }
+.table-type-btn.off { opacity: 0.3; border-color: var(--border); color: var(--text3); background: transparent; }
+.table-type-btn.on { border-color: var(--gold-dim); background: rgba(232,200,74,0.08); color: var(--gold); }
+.table-type-btn .tbl-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 3px; flex-shrink: 0; }
+.add-alliance-btn { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 6px; border: 1px dashed var(--border); color: var(--text3); cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 500; transition: all 0.15s; width: 100%; background: transparent; }
+.add-alliance-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* Filter buttons */
+.filter-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+.fbtn { font-size: 11px; padding: 3px 9px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-family: 'IBM Plex Mono', monospace; transition: all 0.15s; }
+.fbtn:hover { border-color: var(--border2); color: var(--text); }
+.fbtn.on { border-color: var(--gold-dim); background: rgba(232,200,74,0.08); color: var(--gold); }
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.stat-card  { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; }
+.stat-val   { font-size: 18px; font-weight: 700; color: var(--gold); font-family: 'IBM Plex Mono', monospace; }
+.stat-lbl   { font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+
+/* ── Main content column ── */
+.main { display: flex; flex-direction: column; overflow: hidden; }
+
+/* Toolbar */
+.toolbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.toolbar-label { font-size: 11px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+.toolbar-sep   { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.view-btn { font-size: 12px; padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-family: 'Rajdhani', sans-serif; font-weight: 600; letter-spacing: 1px; transition: all 0.15s; }
+.view-btn:hover { border-color: var(--border2); color: var(--text); }
+.view-btn.on    { background: var(--bg4); border-color: var(--border2); color: var(--gold); }
+.reset-btn { margin-left: auto; font-size: 12px; padding: 4px 12px; border-radius: 4px; border: 1px solid #3a1a1a; background: transparent; color: var(--red); cursor: pointer; font-family: 'Rajdhani', sans-serif; font-weight: 600; transition: all 0.15s; }
+.reset-btn:hover { background: #1a0808; border-color: var(--red); }
+
+/* Zoom controls */
+.zoom-btn   { font-size: 14px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-family: monospace; transition: all 0.15s; line-height: 1; }
+.zoom-btn:hover { border-color: var(--border2); color: var(--text); }
+.zoom-level { font-size: 11px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; min-width: 42px; text-align: center; }
+
+/* ── Content area (map + optional table) ── */
+.content { display: flex; flex: 1; overflow: hidden; }
+
+/* Map pane */
+.map-pane { flex: 1; position: relative; overflow: hidden; background: #060e06; }
+.map-pane         { cursor: grab; }
+.map-pane.dragging{ cursor: grabbing; }
+#mc { display: block; width: 100%; height: 100%; }
+
+/* Tooltip */
+.map-tip {
+  position: absolute;
+  background: rgba(13,17,23,0.95);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-size: 11px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  display: none;
+  z-index: 20;
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.6;
+}
+.map-tip b { color: var(--gold); font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; }
+
+/* Table pane */
+.table-pane  { width: 320px; border-left: 1px solid var(--border); overflow-y: auto; background: var(--bg); flex-shrink: 0; }
+.table-head  { display: grid; grid-template-columns: 1fr 90px 50px; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 7px 12px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-family: 'IBM Plex Mono', monospace; position: sticky; top: 0; z-index: 5; }
+.trow        { display: grid; grid-template-columns: 1fr 90px 50px; padding: 5px 12px; border-bottom: 1px solid var(--border); align-items: center; cursor: pointer; transition: background 0.1s; }
+.trow:hover  { background: var(--bg3); }
+.trow.highlighted { background: var(--bg4); }
+.trow-name   { font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trow-coord  { font-size: 10px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+.trow-badge  { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 700; letter-spacing: 0.5px; text-align: center; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; display: inline-block; }
+.trow-owner  { display: flex; align-items: center; gap: 4px; }
+.owner-dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.search-wrap { padding: 7px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 33px; background: var(--bg); z-index: 4; }
+.search-inp  { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; outline: none; transition: border 0.15s; }
+.search-inp:focus { border-color: var(--gold-dim); }
+.search-inp::placeholder { color: var(--text3); }
+
+/* Context menu */
+.ctx-menu { position: fixed; background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; z-index: 100; min-width: 160px; padding: 4px 0; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.ctx-item  { padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text); transition: background 0.1s; font-family: 'Rajdhani', sans-serif; }
+.ctx-item:hover { background: var(--bg3); }
+.ctx-swatch { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ctx-divider { height: 1px; background: var(--border); margin: 3px 0; }
+.ctx-unassign       { color: var(--text3); }
+.ctx-unassign:hover { color: var(--red); background: var(--bg3); }
+
+/* Legend */
+.legend-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 10px; color: var(--text2); }
+
+/* Border swatch — hollow circle showing stroke colour */
+.a-swatch-border { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ PAGE HEADER ══════════════════ -->
+<div class="header">
+  <span class="header-crown">♛</span>
+  <span class="header-title">Server 1363 — Admin</span>
+  <span class="header-sub">Ownership Control Panel · v5 (Isometric)</span>
+  <span class="header-ts" id="lastChange"></span>
+  <span class="saved-badge" id="savedBadge">✓ Saved</span>
+</div>
+
+<!-- ══════════════════ MAIN LAYOUT ══════════════════ -->
+<div class="layout">
+
+  <!-- ── Left sidebar ── -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Alliances</div>
+      <div id="allianceList"></div>
+      <button class="add-alliance-btn" id="addAllianceBtn">＋ Add alliance</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by type</div>
+      <div class="filter-btns" id="filterBtns"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Legend</div>
+      <div id="legendGrid"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Server stats</div>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ── Right: toolbar + map/table ── -->
+  <div class="main">
+    <div class="toolbar">
+      <span class="toolbar-label">View:</span>
+      <button class="view-btn on" id="viewMap">Map</button>
+      <button class="view-btn"    id="viewAlliance">Map + Alliance</button>
+      <button class="view-btn"    id="viewSplit">Map + Table</button>
+      <button class="view-btn"    id="viewTable">Table only</button>
+      <div class="toolbar-sep"></div>
+      <span class="toolbar-label">Zoom:</span>
+      <button class="zoom-btn" id="zoomIn"    title="Zoom in">＋</button>
+      <button class="zoom-btn" id="zoomOut"   title="Zoom out">－</button>
+      <button class="zoom-btn" id="zoomReset" title="Reset view">⌂</button>
+      <span class="zoom-level" id="zoomLabel">100%</span>
+      <button class="reset-btn" id="resetBtn">⚠ Reset all</button>
+    </div>
+
+    <div class="content" id="content">
+      <!-- Canvas map -->
+      <div class="map-pane" id="mapPane">
+        <canvas id="mc"></canvas>
+        <div class="map-tip" id="mapTip"></div>
+      </div>
+      <!-- Table view (hidden by default) -->
+      <div class="table-pane" id="tablePane" style="display:none">
+        <div class="table-type-filters" id="tableTypeFilters"></div>
+        <div class="table-head"><span>Building</span><span>Owner</span><span>Type</span></div>
+        <div class="search-wrap">
+          <input class="search-inp" id="searchInp" placeholder="Search buildings…">
+        </div>
+        <div id="tableBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Right-click context menu (dynamically populated) -->
+<div class="ctx-menu" id="ctxMenu"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: CONFIG
+   All static constants — game data, colours, asset URLs.
+   Nothing in here should change at runtime.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Default fill colours cycled when creating new alliances.
+ * Each alliance also gets a default border colour (lighter variant).
+ */
+const ALLIANCE_COLORS = [
+  '#5563C1','#D85A30','#1D9E75','#D4537E',
+  '#BA7517','#378ADD','#9333EA','#14B8A6',
+  '#F97316','#EC4899'
+];
+
+/** Default border colours paired with ALLIANCE_COLORS (index-matched). */
+const ALLIANCE_BORDER_COLORS = [
+  '#8899FF','#FF8A60','#50D4A0','#FF80AA',
+  '#FFD060','#70BBFF','#CC77FF','#50EDE0',
+  '#FFBB66','#FF80CC'
+];
+
+/**
+ * URLs for outpost type icon images.
+ * Keys match the `k` property on RAW outpost objects.
+ */
+const ASSETS = {
+  construction: 'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Construction-Outpost-1.png',
+  research:     'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Research-outpost.png',
+  training:     'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Training-Outpost.png',
+  production:   'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Resources-Production-Outpost.png',
+  gathering:    'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Gathering-Outpost.png',
+  frontier:     'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Frontier-Lodge-Outposts.png',
+  attack:       'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Squad-Attack-Outpost.png',
+  defense:      'https://got-global-wiki.s3.us-west-1.amazonaws.com/wp-content/uploads/2026/03/Defense-Outpost.png',
+};
+
+/**
+ * Display metadata for each outpost type.
+ * name  — full display name
+ * short — 2-letter code shown in table badges
+ * color — accent colour for chips and UI
+ */
+const TYPES = {
+  construction: { name: "Builder's Guild", short: 'Bld', color: '#D97706' },
+  research:     { name: "Scholar's Tower", short: 'Sch', color: '#0891B2' },
+  training:     { name: 'Drill Camp',      short: 'Drl', color: '#7C3AED' },
+  production:   { name: 'Harvest Altar',   short: 'Ha',  color: '#059669' },
+  gathering:    { name: 'Forager Grove',   short: 'Fg',  color: '#BE185D' },
+  frontier:     { name: 'Frontier Lodge',  short: 'Fnt', color: '#EA580C' },
+  attack:       { name: 'Arsenal',         short: 'Ar',  color: '#DC2626' },
+  defense:      { name: 'Armory',          short: 'Arm', color: '#1D4ED8' },
+};
+
+/** Ordered list of outpost type keys (used for missing-type tracking). */
+const OUTPOST_TYPE_KEYS = Object.keys(TYPES);
+
+/**
+ * Raw outpost data.
+ * k  — type key (matches TYPES)
+ * lv — level (1-4)
+ * x,y — game coordinates (range ~87–1137)
+ */
+const RAW = [
+  {k:'construction',lv:1,x:1068,y:138,owner:11},
+  {k:'construction',lv:1,x:537,y:138,owner:12},
+  {k:'construction',lv:1,x:138,y:138,owner:3},
+  {k:'construction',lv:1,x:138,y:666,owner:2},
+  {k:'construction',lv:1,x:138,y:1038,owner:4},
+  {k:'construction',lv:1,x:666,y:1068,owner:0},
+  {k:'construction',lv:1,x:1068,y:567,owner:7},
+  {k:'construction',lv:1,x:1068,y:1068,owner:2},
+  {k:'construction',lv:3,x:486,y:327,owner:9},
+  {k:'construction',lv:3,x:768,y:867,owner:2},
+  {k:'construction',lv:3,x:867,y:567,owner:7},
+  {k:'construction',lv:3,x:327,y:666,owner:3},
+  {k:'research',lv:1,x:957,y:237,owner:10},
+  {k:'research',lv:1,x:666,y:267,owner:1},
+  {k:'research',lv:1,x:237,y:237,owner:3},
+  {k:'research',lv:1,x:267,y:537,owner:9},
+  {k:'research',lv:1,x:237,y:957,owner:6},
+  {k:'research',lv:1,x:537,y:936},
+  {k:'research',lv:1,x:936,y:537,owner:7},
+  {k:'research',lv:1,x:957,y:957,owner:2},
+  {k:'research',lv:3,x:867,y:327,owner:7},
+  {k:'research',lv:3,x:327,y:327,owner:3},
+  {k:'research',lv:3,x:327,y:867,owner:0},
+  {k:'research',lv:3,x:867,y:867,owner:2},
+  {k:'training',lv:2,x:237,y:486,owner:3},
+  {k:'training',lv:2,x:138,y:747,owner:2},
+  {k:'training',lv:2,x:486,y:957,owner:0},
+  {k:'training',lv:2,x:768,y:1038,owner:5},
+  {k:'training',lv:2,x:957,y:747,owner:7},
+  {k:'training',lv:2,x:1068,y:486,owner:1},
+  {k:'training',lv:2,x:486,y:138,owner:12},
+  {k:'training',lv:2,x:768,y:237,owner:10},
+  {k:'production',lv:1,x:1068,y:237,owner:10},
+  {k:'production',lv:1,x:768,y:138,owner:1},
+  {k:'production',lv:1,x:237,y:138,owner:3},
+  {k:'production',lv:1,x:138,y:327,owner:9},
+  {k:'production',lv:1,x:138,y:957,owner:2},
+  {k:'production',lv:1,x:327,y:1038,owner:5},
+  {k:'production',lv:1,x:1068,y:747,owner:7},
+  {k:'production',lv:1,x:957,y:1068,owner:3},
+  {k:'gathering',lv:1,x:957,y:138,owner:10},
+  {k:'gathering',lv:1,x:537,y:87,owner:12},
+  {k:'gathering',lv:1,x:138,y:237,owner:3},
+  {k:'gathering',lv:1,x:87,y:666,owner:2},
+  {k:'gathering',lv:1,x:267,y:1068,owner:1},
+  {k:'gathering',lv:1,x:636,y:1137,owner:0},
+  {k:'gathering',lv:1,x:1137,y:567,owner:7},
+  {k:'gathering',lv:1,x:1068,y:936,owner:2},
+  {k:'frontier',lv:3,x:768,y:327,owner:10},
+  {k:'frontier',lv:3,x:327,y:567,owner:3},
+  {k:'frontier',lv:3,x:486,y:867,owner:2},
+  {k:'frontier',lv:3,x:867,y:666,owner:7},
+  {k:'attack',lv:2,x:867,y:138,owner:1},
+  {k:'attack',lv:2,x:366,y:138,owner:3},
+  {k:'attack',lv:2,x:138,y:438,owner:9},
+  {k:'attack',lv:2,x:138,y:867,owner:2},
+  {k:'attack',lv:2,x:438,y:1068,owner:0},
+  {k:'attack',lv:2,x:1068,y:327,owner:11},
+  {k:'attack',lv:2,x:1068,y:867,owner:7},
+  {k:'attack',lv:2,x:867,y:1068,owner:2},
+  {k:'attack',lv:4,x:588,y:867,owner:2},
+  {k:'attack',lv:4,x:387,y:486,owner:3},
+  {k:'attack',lv:4,x:816,y:486,owner:7},
+  {k:'defense',lv:2,x:537,y:1038,owner:5},
+  {k:'defense',lv:2,x:237,y:768,owner:2},
+  {k:'defense',lv:2,x:138,y:537,owner:9},
+  {k:'defense',lv:2,x:438,y:267,owner:3},
+  {k:'defense',lv:2,x:666,y:138,owner:12},
+  {k:'defense',lv:2,x:957,y:438,owner:10},
+  {k:'defense',lv:2,x:1068,y:666,owner:7},
+  {k:'defense',lv:2,x:738,y:957,owner:0},
+  {k:'defense',lv:4,x:816,y:717,owner:7},
+  {k:'defense',lv:4,x:588,y:327,owner:9},
+  {k:'defense',lv:4,x:387,y:717,owner:3}
+];
+
+/**
+ * Sanctuary locations — verified from kingshotwiki.com/alliance-ruins/ruins/
+ * Sanctuary 1 corrected: was 606,237 — official coords are 237,828
+ * All 12 form a ring around the castle, evenly spaced.
+ */
+const SANCTUARIES = [
+  {n:'Sanctuary 1', x:237,y:828},
+  {n:'Sanctuary 2', x:237,y:606},
+  {n:'Sanctuary 3', x:237,y:348},
+  {n:'Sanctuary 4', x:366,y:237},
+  {n:'Sanctuary 5', x:588,y:237},
+  {n:'Sanctuary 6', x:846,y:237},
+  {n:'Sanctuary 7', x:957,y:348},
+  {n:'Sanctuary 8', x:957,y:606},
+  {n:'Sanctuary 9', x:957,y:828},
+  {n:'Sanctuary 10',x:846,y:957},
+  {n:'Sanctuary 11',x:606,y:957},
+  {n:'Sanctuary 12',x:366,y:957},
+];
+
+/**
+ * Fortress locations — verified from kingshotwiki.com/alliance-ruins/ruins/
+ * 4 fortresses form a cross around the King's Castle.
+ */
+const FORTRESSES = [
+  {n:'Fortress 1',x:597,y:800},
+  {n:'Fortress 2',x:400,y:597},
+  {n:'Fortress 3',x:597,y:400},
+  {n:'Fortress 4',x:800,y:597},
+];
+
+/**
+ * Combined feature list built from RAW + SANCTUARIES + FORTRESSES + Castle.
+ * Each feature carries: id, cat, k, lv, x, y, n (name for special), alliance (null = unowned).
+ */
+const allFeatures = [
+  ...RAW.map((o,i)  => ({ ...o, id:'op'+i,   cat:'outpost',   alliance:null, n: TYPES[o.k].name+' Lv.'+o.lv })),
+  ...SANCTUARIES.map((s,i) => ({ ...s, id:'san'+i,  cat:'sanctuary', alliance:null, k:'sanctuary', lv:null })),
+  ...FORTRESSES.map((f,i)  => ({ ...f, id:'fort'+i, cat:'fortress',  alliance:null, k:'fortress',  lv:null })),
+  // King's Castle — centre of the map at X600, Y600
+  { n:"King's Castle", id:'castle', cat:'castle', x:600, y:600, alliance:null, k:'castle', lv:null },
+];
+
+/** Total outpost count (used for progress bar max). */
+const TOTAL_OUTPOSTS = allFeatures.filter(f => f.cat === 'outpost').length;
+
+/**
+ * Isometric projection constants.
+ * The Kingshot map runs from coordinate 0 to 1199 on both axes.
+ * Center is 600, half-range is 600.
+ * In-game: X0,Y0 = bottom-left corner of the diamond
+ *           X1199,Y1199 = top-right corner of the diamond
+ *           X600,Y600 = King's Castle at the centre
+ */
+const MAP_CENTER     = 600;
+const MAP_HALF_RANGE = 600;
+
+// localStorage key for persistence
+const STORAGE_KEY = 'kingshot_1363_v3';
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: IMAGE CACHE
+   Pre-load all outpost icon images off the network.
+   ═══════════════════════════════════════════════════════════════ */
+
+/** @type {Object.<string, HTMLImageElement>} keyed by outpost type */
+const IMG_CACHE = {};
+
+OUTPOST_TYPE_KEYS.forEach(k => {
+  const img = new Image();
+  img.src = ASSETS[k];   // begin fetch immediately
+  IMG_CACHE[k] = img;
+});
+
+/**
+ * Background map image (tilted 45° on canvas).
+ * Attempts to load the community ksmapper image; falls through
+ * to procedural drawing in drawBackground() on error.
+ */
+const mapBgImg = new Image();
+mapBgImg.crossOrigin = 'anonymous';
+mapBgImg.src = 'https://ksmapper.pages.dev/map.png';
+let bgImgLoaded = false;
+mapBgImg.onload  = () => { bgImgLoaded = true;  render(); };
+mapBgImg.onerror = () => { bgImgLoaded = false; render(); }; // use procedural fallback
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: STATE
+   All mutable runtime state lives here.
+   ═══════════════════════════════════════════════════════════════ */
+
+/** @type {Array<{name:string, hex:string}>} */
+let alliances = [
+  {name:'UAO',hex:'#5563C1',border:'#8899FF'},
+  {name:'LOL',hex:'#D85A30',border:'#FF8A60'},
+  {name:'HEX',hex:'#1D9E75',border:'#50D4A0'},
+  {name:'lOO',hex:'#D4537E',border:'#FF80AA'},
+  {name:'ALE',hex:'#BA7517',border:'#FFD060'},
+  {name:'RIP',hex:'#378ADD',border:'#70BBFF'},
+  {name:'HMB',hex:'#9333EA',border:'#CC77FF'},
+  {name:'lol',hex:'#14B8A6',border:'#50EDE0'},
+  {name:'NHA',hex:'#F97316',border:'#FFBB66'},
+  {name:'UaO',hex:'#EC4899',border:'#FF80CC'},
+  {name:'TLC',hex:'#06B6D4',border:'#22D3EE'},
+  {name:'KING',hex:'#F43F5E',border:'#F87171'},
+  {name:'Vpj',hex:'#84CC16',border:'#A3E635'}
+];
+
+/** Index into alliances[] of the currently active alliance for assignment. */
+let selA = 0;
+
+/** Active filter categories (shown on map). */
+let activeFilters = new Set(['outpost', 'sanctuary', 'fortress']);
+
+/** Alliance indices hidden from the map. */
+let hiddenAlliances = new Set();
+
+/** Active outpost types shown in the table. */
+let activeTableTypes = new Set([...OUTPOST_TYPE_KEYS, 'sanctuary', 'fortress']);
+
+/** Current view mode: 'map' | 'split' | 'table' */
+let viewMode = 'map';
+
+/** Feature id currently highlighted (from table hover). */
+let highlightId = null;
+
+/** Current table search string. */
+let searchQ = '';
+
+// ── Zoom / pan state ──
+let zoom  = 1.0;   // current zoom multiplier
+let panX  = 0;     // pixel offset from canvas centre (X)
+let panY  = 0;     // pixel offset from canvas centre (Y)
+
+// ── Drag tracking ──
+let isDragging  = false;
+let dragStartX  = 0;
+let dragStartY  = 0;
+let panStartX   = 0;
+let panStartY   = 0;
+
+// ── Context menu target ──
+let ctxFeature  = null;   // feature the ctx menu was opened on
+
+// ── Last change timestamp ──
+let lastChangeTimestamp = null;
+
+// ── Canvas dimensions ──
+let CW = 600, CH = 600;
+
+// ── Animation frame handle ──
+let rafPending = false;
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: COORD_TRANSFORM
+   Converts game coordinates to isometric screen coords and back.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Convert game coordinates (gx, gy) to canvas screen position (sx, sy).
+ *
+ * Kingshot coordinate system (0–1199 on both axes):
+ *   - X increases going RIGHT on the flat map
+ *   - Y increases going DOWN on the flat map
+ *   - King's Castle sits at X600, Y600
+ *
+ * The background is drawn as a square rotated 45° (ctx.rotate(PI/4)),
+ * which makes it appear as an isometric diamond. We must project game
+ * coords using the same pure 45° rotation so markers align with the map.
+ *
+ * After normalising to -1..+1 range:
+ *   screen_x = (nx - ny) / √2 * scale
+ *   screen_y = (nx + ny) / √2 * scale
+ *
+ * The √2 denominator comes from the rotation: a unit vector at 45° has
+ * components (1/√2, 1/√2), so we need to divide by √2 to keep the
+ * projected scale consistent with the background image dimensions.
+ *
+ * @param {number} gx - Game X coordinate (0–1199)
+ * @param {number} gy - Game Y coordinate (0–1199)
+ * @returns {{sx:number, sy:number}} Canvas pixel position
+ */
+function gameToIso(gx, gy) {
+  const INV_SQRT2 = 0.7071067811865476;             // 1/√2
+  // halfSide matches background: side = min(CW,CH)*0.78, so half = *0.39
+  const halfSide  = Math.min(CW, CH) * 0.39;
+  const nx = (gx - MAP_CENTER) / MAP_HALF_RANGE;   // normalise to -1..+1
+  const ny = (gy - MAP_CENTER) / MAP_HALF_RANGE;
+  return {
+    sx: CW / 2 + panX + zoom * halfSide * (nx - ny) * INV_SQRT2,
+    sy: CH / 2 + panY - zoom * halfSide * (nx + ny) * INV_SQRT2
+  };
+}
+
+/**
+ * Inverse of gameToIso — convert a canvas pixel back to game coordinates.
+ *
+ * @param {number} px - Canvas pixel X
+ * @param {number} py - Canvas pixel Y
+ * @returns {{gx:number, gy:number}} Approximate game coordinates (0–1199)
+ */
+function isoToGame(px, py) {
+  const SQRT2    = 1.4142135623730951;
+  const halfSide = Math.min(CW, CH) * 0.39;
+  const dx = (px - CW / 2 - panX) / (zoom * halfSide);
+  const dy = (py - CH / 2 - panY) / (zoom * halfSide);
+  // Inverse rotation (flipped Y axis: game Y increases upward):
+  //   nx = (dx - dy) * √2/2,  ny = -(dx + dy) * √2/2
+  const nx = (dx - dy) * SQRT2 / 2;
+  const ny = -(dx + dy) * SQRT2 / 2;
+  return {
+    gx: Math.round(nx * MAP_HALF_RANGE + MAP_CENTER),
+    gy: Math.round(ny * MAP_HALF_RANGE + MAP_CENTER)
+  };
+}
+
+/**
+ * Get the display radius for a feature marker in BASE pixels (before zoom).
+ * @param {Object} f - Feature object
+ * @returns {number} Radius in pixels
+ */
+function getR(f) {
+  if (f.cat === 'castle')    return 15;
+  if (f.cat === 'fortress')  return 11;
+  if (f.cat === 'sanctuary') return 9;
+  // Outpost radius scales with level
+  return f.lv === 1 ? 6 : f.lv === 2 ? 7.5 : f.lv === 3 ? 9 : 11;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: MAP_RENDERER
+   All canvas 2D drawing functions. render() is the entry point.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Draw the isometric map background.
+ * Attempts to render the loaded background image as a 45°-rotated diamond.
+ * Falls back to a procedural painted diamond when no image is available.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ */
+function drawBackground(ctx) {
+  // Fill canvas with dark base colour first
+  ctx.fillStyle = '#060e06';
+  ctx.fillRect(0, 0, CW, CH);
+
+  ctx.save();
+  // Move origin to canvas centre + current pan
+  ctx.translate(CW / 2 + panX, CH / 2 + panY);
+  ctx.rotate(Math.PI / 4);          // 45° rotation = isometric diamond
+  ctx.scale(zoom, zoom);            // respect current zoom level
+
+  const side = Math.min(CW, CH) * 0.78; // diamond side length in base pixels
+
+  if (bgImgLoaded) {
+    // Render the actual map image as a square (rotation makes it a diamond)
+    ctx.drawImage(mapBgImg, -side / 2, -side / 2, side, side);
+    // Darken overlay so markers remain readable
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(-side / 2, -side / 2, side, side);
+  } else {
+    // ── Procedural terrain fallback ──
+    // Outer dark forest ring
+    ctx.fillStyle = '#0a1a0a';
+    ctx.fillRect(-side / 2, -side / 2, side, side);
+
+    // Mid green plains
+    const mid = side * 0.78;
+    ctx.fillStyle = '#0d2010';
+    ctx.fillRect(-mid / 2, -mid / 2, mid, mid);
+
+    // Inner lighter grass
+    const inn = side * 0.5;
+    ctx.fillStyle = '#102815';
+    ctx.fillRect(-inn / 2, -inn / 2, inn, inn);
+
+    // Central castle glow area
+    const cas = side * 0.18;
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, cas);
+    grad.addColorStop(0, 'rgba(232,200,74,0.18)');
+    grad.addColorStop(1, 'rgba(232,200,74,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(-cas, -cas, cas * 2, cas * 2);
+
+    // Subtle grid lines (iso squares)
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    const step = side / 13; // 13×13 grid like the real game
+    for (let i = -6; i <= 7; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * step, -side / 2);
+      ctx.lineTo(i * step,  side / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-side / 2, i * step);
+      ctx.lineTo( side / 2, i * step);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draw a single outpost marker (circle with optional type icon).
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} f   - Feature with cat='outpost'
+ * @param {number} sx  - Screen X
+ * @param {number} sy  - Screen Y
+ * @param {number} r   - Base radius (pixels)
+ * @param {boolean} hl - Whether this marker is highlighted
+ */
+function drawOutpost(ctx, f, sx, sy, r, hl) {
+  const color  = f.alliance !== null ? (alliances[f.alliance]?.hex    || '#3a4a5a') : '#3a4a5a';
+  const stroke = f.alliance !== null ? (alliances[f.alliance]?.border || 'rgba(255,255,255,0.85)') : 'rgba(255,255,255,0.85)';
+
+  ctx.save();
+
+  // Drop shadow for legibility over map
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur  = 6;
+
+  // Highlight ring behind marker
+  if (hl) {
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  }
+
+  // Filled circle body
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.fillStyle   = color;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  // Label: two lines — short type code on top, "Lv#" below
+  // e.g. "Ar" / "Lv2" for Arsenal Lv2, "Arm" / "Lv4" for Armory Lv4
+  const shortCode = TYPES[f.k]?.short || '?';
+  const lvLine    = f.lv ? 'Lv' + f.lv : '';
+  const fontSize  = Math.max(6, r * 0.72);
+  ctx.fillStyle    = 'rgba(255,255,255,0.95)';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  if (lvLine) {
+    // Two-line label — shift each line up/down by ~35% of radius
+    ctx.font = `bold ${fontSize}px 'IBM Plex Mono', monospace`;
+    ctx.fillText(shortCode, sx, sy - r * 0.28);
+    ctx.font = `${Math.max(5, fontSize * 0.82)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = 'rgba(220,220,255,0.85)';
+    ctx.fillText(lvLine, sx, sy + r * 0.35);
+  } else {
+    ctx.font = `bold ${fontSize}px 'IBM Plex Mono', monospace`;
+    ctx.fillText(shortCode, sx, sy);
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draw a sanctuary marker — gold rotated square (diamond shape).
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} f  - Feature with cat='sanctuary'
+ * @param {number} sx - Screen X
+ * @param {number} sy - Screen Y
+ * @param {number} r  - Base size
+ * @param {boolean} hl - Highlighted
+ */
+function drawSanctuary(ctx, f, sx, sy, r, hl) {
+  const color  = f.alliance !== null ? (alliances[f.alliance]?.hex    || '#7a6520') : '#7a6520';
+  const stroke = f.alliance !== null ? (alliances[f.alliance]?.border || '#e8c84a') : '#e8c84a';
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur  = 5;
+
+  if (hl) {
+    // Outer glow ring
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  }
+
+  // Draw rotated square (diamond)
+  ctx.translate(sx, sy);
+  ctx.rotate(Math.PI / 4);
+  ctx.beginPath();
+  ctx.rect(-r, -r, r * 2, r * 2);
+  ctx.fillStyle   = color;
+  ctx.fill();
+  ctx.strokeStyle = stroke;  // alliance border colour, or gold when unowned
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.rotate(-Math.PI / 4);
+
+  // Label "S#" below
+  ctx.shadowBlur  = 0;
+  ctx.fillStyle   = 'rgba(255,255,255,0.9)';
+  ctx.font        = `bold ${Math.max(7, r * 0.8)}px 'IBM Plex Mono'`;
+  ctx.textAlign   = 'center';
+  ctx.textBaseline= 'top';
+  const num       = (f.n || '').replace('Sanctuary ','S');
+  ctx.fillText(num, 0, r + 2);
+
+  ctx.restore();
+}
+
+/**
+ * Draw a fortress marker — pentagon/shield shape.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} f  - Feature with cat='fortress'
+ * @param {number} sx - Screen X
+ * @param {number} sy - Screen Y
+ * @param {number} r  - Base size
+ * @param {boolean} hl - Highlighted
+ */
+function drawFortress(ctx, f, sx, sy, r, hl) {
+  const color  = f.alliance !== null ? (alliances[f.alliance]?.hex    || '#2a3550') : '#2a3550';
+  const stroke = f.alliance !== null ? (alliances[f.alliance]?.border || 'rgba(255,255,255,0.85)') : 'rgba(255,255,255,0.85)';
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur  = 5;
+
+  if (hl) {
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  }
+
+  // Pentagon (5 sides, flat-top oriented)
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = (Math.PI * 2 * i / 5) - Math.PI / 2; // start at top
+    const px    = sx + Math.cos(angle) * r;
+    const py    = sy + Math.sin(angle) * r;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle   = color;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  // Label "F#"
+  ctx.fillStyle    = 'rgba(255,255,255,0.9)';
+  ctx.font         = `bold ${Math.max(6, r * 0.7)}px 'IBM Plex Mono'`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText((f.n || '').replace('Fortress ','F'), sx, sy);
+
+  ctx.restore();
+}
+
+/**
+ * Draw the King's Castle — prominent gold 8-pointed star at map centre.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} sx - Screen X
+ * @param {number} sy - Screen Y
+ * @param {number} r  - Outer star radius
+ * @param {boolean} hl - Highlighted
+ */
+function drawCastle(ctx, sx, sy, r, hl) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(232,200,74,0.8)';
+  ctx.shadowBlur  = hl ? 20 : 12;
+
+  // Outer pulsing ring when highlighted
+  if (hl) {
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 8, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(232,200,74,0.6)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  }
+
+  // 8-pointed star
+  const spikes  = 8;
+  const inner   = r * 0.45;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const angle   = (Math.PI * i / spikes) - Math.PI / 2;
+    const dist    = i % 2 === 0 ? r : inner;
+    const px      = sx + Math.cos(angle) * dist;
+    const py      = sy + Math.sin(angle) * dist;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+
+  // Gold gradient fill
+  const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+  grad.addColorStop(0, '#f5d96a');
+  grad.addColorStop(1, '#a07010');
+  ctx.fillStyle   = grad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,220,0.9)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  // Crown ♛ symbol
+  ctx.shadowBlur   = 0;
+  ctx.fillStyle    = '#0d1117';
+  ctx.font         = `bold ${Math.max(9, r * 0.65)}px serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('♛', sx, sy);
+
+  ctx.restore();
+}
+
+/**
+ * Main render function — clears the canvas and redraws everything.
+ * Uses requestAnimationFrame for smooth batching.
+ */
+function render() {
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(_render);
+  }
+}
+
+/** Internal rAF callback. @private */
+function _render() {
+  rafPending = false;
+  const canvas = document.getElementById('mc');
+  if (!canvas) return;
+  const ctx    = canvas.getContext('2d');
+
+  // Sync canvas resolution to its CSS size
+  const rect = canvas.getBoundingClientRect();
+  if (canvas.width !== rect.width || canvas.height !== rect.height) {
+    canvas.width  = rect.width;
+    canvas.height = rect.height;
+  }
+  CW = canvas.width;
+  CH = canvas.height;
+
+  ctx.clearRect(0, 0, CW, CH);
+
+  // 1. Background
+  drawBackground(ctx);
+
+  // 2. Feature markers
+  allFeatures.forEach(f => {
+    // Respect visibility filters
+    if (f.cat === 'outpost') {
+      if (!activeFilters.has('outpost')) return;
+      if (!activeTableTypes.has(f.k)) return;
+      if (f.alliance !== null && hiddenAlliances.has(f.alliance)) return;
+    }
+    if (f.cat === 'sanctuary') {
+      if (!activeFilters.has('sanctuary')) return;
+      if (!activeTableTypes.has('sanctuary')) return;
+    }
+    if (f.cat === 'fortress') {
+      if (!activeFilters.has('fortress')) return;
+      if (!activeTableTypes.has('fortress')) return;
+    }
+
+    const { sx, sy } = gameToIso(f.x, f.y);
+    const r          = getR(f) * Math.max(0.6, Math.min(zoom, 1.8)); // slightly scale markers with zoom
+    const hl         = f.id === highlightId;
+
+    if (f.cat === 'castle')    { drawCastle(ctx, sx, sy, r, hl); return; }
+    if (f.cat === 'sanctuary') { drawSanctuary(ctx, f, sx, sy, r, hl); return; }
+    if (f.cat === 'fortress')  { drawFortress(ctx, f, sx, sy, r, hl); return; }
+    if (f.cat === 'outpost')   { drawOutpost(ctx, f, sx, sy, r, hl); }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: HIT_TEST
+   Mouse event helpers — find which feature is under cursor.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Find the topmost feature under canvas pixel coordinates (px, py).
+ * Uses Euclidean distance to each marker's screen position.
+ *
+ * @param {number} px - Canvas X
+ * @param {number} py - Canvas Y
+ * @returns {Object|null} Matching feature or null
+ */
+function featureAtPixel(px, py) {
+  // Iterate in reverse so topmost-drawn (castle, fortress, sanctuary) wins
+  for (let i = allFeatures.length - 1; i >= 0; i--) {
+    const f = allFeatures[i];
+    if (f.cat === 'outpost') {
+      if (!activeFilters.has('outpost')) continue;
+      if (!activeTableTypes.has(f.k)) continue;
+      if (f.alliance !== null && hiddenAlliances.has(f.alliance)) continue;
+    }
+    if (f.cat === 'sanctuary') {
+      if (!activeFilters.has('sanctuary')) continue;
+      if (!activeTableTypes.has('sanctuary')) continue;
+    }
+    if (f.cat === 'fortress') {
+      if (!activeFilters.has('fortress')) continue;
+      if (!activeTableTypes.has('fortress')) continue;
+    }
+
+    const { sx, sy } = gameToIso(f.x, f.y);
+    const r         = (getR(f) + 4) * Math.max(0.6, Math.min(zoom, 1.8)); // generous hit radius
+    const dist      = Math.hypot(px - sx, py - sy);
+    if (dist <= r) return f;
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: ZOOM_PAN
+   Mouse wheel zoom and drag-pan interactions.
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Minimum allowed zoom level. */
+const ZOOM_MIN = 0.4;
+/** Maximum allowed zoom level. */
+const ZOOM_MAX = 8.0;
+
+/**
+ * Apply a zoom delta, centred on the given canvas pixel position.
+ * Adjusts panX/panY so the point under the cursor stays stationary.
+ *
+ * @param {number} factor - Multiply current zoom by this (>1 = zoom in)
+ * @param {number} cx     - Canvas X to zoom towards
+ * @param {number} cy     - Canvas Y to zoom towards
+ */
+function applyZoom(factor, cx, cy) {
+  const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom * factor));
+  if (newZoom === zoom) return;
+
+  // Offset adjustment: keep (cx, cy) fixed on screen
+  const ratio = newZoom / zoom;
+  panX = cx - CW / 2 - (cx - CW / 2 - panX) * ratio;
+  panY = cy - CH / 2 - (cy - CH / 2 - panY) * ratio;
+  zoom = newZoom;
+
+  updateZoomLabel();
+  render();
+}
+
+/**
+ * Reset zoom and pan to the default "fit all" view.
+ */
+function resetView() {
+  zoom = 1.0;
+  panX = 0;
+  panY = 0;
+  updateZoomLabel();
+  render();
+}
+
+/**
+ * Update the zoom percentage label in the toolbar.
+ */
+function updateZoomLabel() {
+  const el = document.getElementById('zoomLabel');
+  if (el) el.textContent = Math.round(zoom * 100) + '%';
+}
+
+/**
+ * Wire up zoom-pan event listeners on the map pane and canvas.
+ */
+function initZoomPan() {
+  const pane   = document.getElementById('mapPane');
+  const canvas = document.getElementById('mc');
+
+  // ── Mouse wheel: zoom centred on cursor ──
+  pane.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect   = canvas.getBoundingClientRect();
+    const cx     = e.clientX - rect.left;
+    const cy     = e.clientY - rect.top;
+    const factor = e.deltaY > 0 ? 0.85 : 1.18; // scroll down = zoom out
+    applyZoom(factor, cx, cy);
+  }, { passive: false });
+
+  // ── Mouse drag: pan ──
+  pane.addEventListener('mousedown', e => {
+    if (e.button !== 0) return; // left button only
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    panStartX  = panX;
+    panStartY  = panY;
+    pane.classList.add('dragging');
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    panX = panStartX + (e.clientX - dragStartX);
+    panY = panStartY + (e.clientY - dragStartY);
+    render();
+  });
+
+  window.addEventListener('mouseup', e => {
+    if (!isDragging) return;
+    isDragging = false;
+    pane.classList.remove('dragging');
+  });
+
+  // ── Double-click: reset view ──
+  pane.addEventListener('dblclick', () => resetView());
+
+  // ── Touch pinch-zoom ──
+  let lastTouchDist = null;
+  pane.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      lastTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: true });
+
+  pane.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && lastTouchDist) {
+      const dist   = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const rect   = canvas.getBoundingClientRect();
+      applyZoom(dist / lastTouchDist, cx - rect.left, cy - rect.top);
+      lastTouchDist = dist;
+    }
+  }, { passive: true });
+
+  pane.addEventListener('touchend', () => { lastTouchDist = null; });
+
+  // ── Toolbar zoom buttons ──
+  document.getElementById('zoomIn')   .addEventListener('click', () => applyZoom(1.3, CW/2, CH/2));
+  document.getElementById('zoomOut')  .addEventListener('click', () => applyZoom(0.77, CW/2, CH/2));
+  document.getElementById('zoomReset').addEventListener('click', () => resetView());
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: TOOLTIP
+   Hover tooltip on map — shows building info on mousemove.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Wire up the hover tooltip listener on the canvas.
+ * Moves a floating <div> near the cursor with feature details.
+ */
+function initTooltip() {
+  const canvas = document.getElementById('mc');
+  const tip    = document.getElementById('mapTip');
+  const pane   = document.getElementById('mapPane');
+
+  pane.addEventListener('mousemove', e => {
+    if (isDragging) { tip.style.display = 'none'; return; }
+
+    const rect = canvas.getBoundingClientRect();
+    const px   = e.clientX - rect.left;
+    const py   = e.clientY - rect.top;
+    const f    = featureAtPixel(px, py);
+
+    if (f) {
+      const owner = f.alliance !== null ? (alliances[f.alliance]?.name || 'Unknown') : 'Unowned';
+      let html = `<b>${f.n || f.k}</b><br>`;
+      if (f.cat === 'outpost') {
+        html += `Type: ${TYPES[f.k]?.name || f.k}<br>Level: ${f.lv}<br>`;
+      } else {
+        html += `Category: ${f.cat}<br>`;
+      }
+      html += `Owner: ${owner}<br>Coords: ${f.x}, ${f.y}`;
+      tip.innerHTML       = html;
+      tip.style.display   = 'block';
+      // Position tip so it doesn't overflow the pane
+      const tipX = Math.min(px + 14, pane.offsetWidth  - tip.offsetWidth  - 10);
+      const tipY = Math.min(py + 14, pane.offsetHeight - tip.offsetHeight - 10);
+      tip.style.left = tipX + 'px';
+      tip.style.top  = tipY + 'px';
+    } else {
+      tip.style.display = 'none';
+    }
+  });
+
+  pane.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: CONTEXT_MENU
+   Right-click menu to assign / unassign alliance ownership.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Show the context menu at screen position for a given feature.
+ * Populates menu items with current alliances.
+ *
+ * @param {number} cx   - Client X
+ * @param {number} cy   - Client Y
+ * @param {Object} feat - Feature being right-clicked
+ */
+function showContextMenu(cx, cy, feat) {
+  ctxFeature      = feat;
+  const menu      = document.getElementById('ctxMenu');
+  menu.innerHTML  = '';
+
+  // Alliance assignment items
+  alliances.forEach((a, i) => {
+    const item      = document.createElement('div');
+    item.className  = 'ctx-item';
+    const dot       = document.createElement('span');
+    dot.className   = 'ctx-swatch';
+    dot.style.background = a.hex;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(a.name));
+    if (feat.alliance === i) item.style.color = 'var(--gold)';  // mark current owner
+    item.addEventListener('click', () => {
+      feat.alliance = i;
+      hideContextMenu();
+      lastChangeTimestamp = Date.now();
+      save();
+            renderSidebar();
+      renderTable();
+      render();
+    });
+    menu.appendChild(item);
+  });
+
+  // Divider + Unassign
+  if (feat.alliance !== null) {
+    const divider      = document.createElement('div');
+    divider.className  = 'ctx-divider';
+    menu.appendChild(divider);
+
+    const del          = document.createElement('div');
+    del.className      = 'ctx-item ctx-unassign';
+    del.textContent    = '✕ Unassign';
+    del.addEventListener('click', () => {
+      feat.alliance = null;
+      hideContextMenu();
+      lastChangeTimestamp = Date.now();
+      save();
+            renderSidebar();
+      renderTable();
+      render();
+    });
+    menu.appendChild(del);
+  }
+
+  // Position menu, keeping it inside viewport
+  menu.style.display = 'block';
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  menu.style.left = Math.min(cx, window.innerWidth  - mw - 8) + 'px';
+  menu.style.top  = Math.min(cy, window.innerHeight - mh - 8) + 'px';
+}
+
+/** Hide and clear the context menu. */
+function hideContextMenu() {
+  const menu         = document.getElementById('ctxMenu');
+  menu.style.display = 'none';
+  ctxFeature         = null;
+}
+
+/**
+ * Wire up right-click listener on the map canvas.
+ */
+function initContextMenu() {
+  const pane   = document.getElementById('mapPane');
+  const canvas = document.getElementById('mc');
+
+  pane.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const f    = featureAtPixel(e.clientX - rect.left, e.clientY - rect.top);
+    if (f) showContextMenu(e.clientX, e.clientY, f);
+    else hideContextMenu();
+  });
+
+  // Close menu on any outside click
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('ctxMenu');
+    if (!menu.contains(e.target)) hideContextMenu();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: SIDEBAR
+   Alliance management — render cards, stats, filters, legend.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Compute ownership statistics for a single alliance.
+ *
+ * byType is now keyed by "type:level" (e.g. "attack:2", "attack:4") so the
+ * breakdown and coverage panels can show each level variant separately.
+ *
+ * missingLevels lists type+level combos the alliance does NOT yet own
+ * (only combos that actually exist on the map are considered).
+ *
+ * @param {number} ai - Alliance index in alliances[]
+ * @returns {{
+ *   total: number,
+ *   missingLevels: Array<{k:string, lv:number}>,
+ *   byTypeLv: Object,   // key = "type:lv", value = count owned
+ *   allTypeLvs: Array<{k:string, lv:number}>,  // all combos that exist on map
+ *   sanctuaries: number,
+ *   fortresses: number
+ * }}
+ */
+function getAllianceStats(ai) {
+  const ownedOutposts = allFeatures.filter(f => f.alliance === ai && f.cat === 'outpost');
+
+  // Build the complete set of (type, level) combos that exist on this map
+  const allTypeLvs = [];
+  const seen = new Set();
+  allFeatures.forEach(f => {
+    if (f.cat !== 'outpost') return;
+    const key = f.k + ':' + f.lv;
+    if (!seen.has(key)) { seen.add(key); allTypeLvs.push({ k: f.k, lv: f.lv }); }
+  });
+  // Sort: group by type key order, then by level ascending
+  allTypeLvs.sort((a, b) => {
+    const ki = OUTPOST_TYPE_KEYS.indexOf(a.k) - OUTPOST_TYPE_KEYS.indexOf(b.k);
+    return ki !== 0 ? ki : a.lv - b.lv;
+  });
+
+  // Count owned outposts per (type, level) combo
+  const byTypeLv = {};
+  allTypeLvs.forEach(({ k, lv }) => {
+    const key = k + ':' + lv;
+    byTypeLv[key] = ownedOutposts.filter(f => f.k === k && f.lv === lv).length;
+  });
+
+  // Missing = combos where the alliance owns ZERO of that type+level
+  const missingLevels = allTypeLvs.filter(({ k, lv }) => byTypeLv[k + ':' + lv] === 0);
+
+  // Total available per combo (for bar scaling)
+  const totalPerTypeLv = {};
+  allTypeLvs.forEach(({ k, lv }) => {
+    totalPerTypeLv[k + ':' + lv] = allFeatures.filter(f => f.cat === 'outpost' && f.k === k && f.lv === lv).length;
+  });
+
+  const sanctuaries = allFeatures.filter(f => f.alliance === ai && f.cat === 'sanctuary').length;
+  const fortresses  = allFeatures.filter(f => f.alliance === ai && f.cat === 'fortress').length;
+
+  return {
+    total: ownedOutposts.length,
+    missingLevels,
+    byTypeLv,
+    allTypeLvs,
+    totalPerTypeLv,
+    sanctuaries,
+    fortresses
+  };
+}
+
+/**
+ * Render (or re-render) the full sidebar: alliance cards + stats + filters + legend.
+ */
+function renderSidebar() {
+  renderAllianceList();
+  renderStats();
+  renderFilters();
+  renderLegend();
+}
+
+/**
+ * Render all alliance cards into #allianceList.
+ */
+function renderAllianceList() {
+  const list = document.getElementById('allianceList');
+  list.innerHTML = '';
+
+  alliances.forEach((a, ai) => {
+    const stats = getAllianceStats(ai);
+    const card  = document.createElement('div');
+    card.className = 'alliance-card' + (ai === selA ? ' active' : '');
+    card.addEventListener('click', () => {
+      selA = ai;
+      renderSidebar();
+      render();
+    });
+
+    // ── Header row: swatch + name input + delete ──
+    const hdr      = document.createElement('div');
+    hdr.className  = 'alliance-card-header';
+
+    // ── Fill colour swatch ──
+    const sw      = document.createElement('span');
+    sw.className  = 'a-swatch';
+    sw.style.background = a.hex;
+    sw.title      = 'Click to change fill colour';
+    sw.style.cursor = 'pointer';
+    sw.addEventListener('click', e => {
+      e.stopPropagation();
+      const picker = document.createElement('input');
+      picker.type  = 'color';
+      picker.value = a.hex;
+      picker.style.display = 'none';
+      document.body.appendChild(picker);
+      picker.click();
+      picker.addEventListener('input', () => {
+        a.hex = picker.value;
+        sw.style.background = a.hex;
+        save(); renderSidebar(); render();
+      });
+      picker.addEventListener('change', () => { document.body.removeChild(picker); });
+    });
+
+    // ── Border colour swatch ──
+    const bsw     = document.createElement('span');
+    bsw.className = 'a-swatch a-swatch-border';
+    bsw.style.background   = 'transparent';
+    bsw.style.border       = `2px solid ${a.border || '#ffffff'}`;
+    bsw.title     = 'Click to change border/stroke colour';
+    bsw.style.cursor = 'pointer';
+    bsw.addEventListener('click', e => {
+      e.stopPropagation();
+      const picker = document.createElement('input');
+      picker.type  = 'color';
+      picker.value = a.border || '#ffffff';
+      picker.style.display = 'none';
+      document.body.appendChild(picker);
+      picker.click();
+      picker.addEventListener('input', () => {
+        a.border = picker.value;
+        bsw.style.border = `2px solid ${a.border}`;
+        save(); render();
+      });
+      picker.addEventListener('change', () => { document.body.removeChild(picker); });
+    });
+
+    const inp      = document.createElement('input');
+    inp.className  = 'a-name-inp';
+    inp.value      = a.name;
+    inp.placeholder = 'Alliance name';
+    inp.addEventListener('input', e => { a.name = e.target.value; save(); });
+    inp.addEventListener('click', e => e.stopPropagation());
+
+    const del     = document.createElement('span');
+    del.className = 'a-del';
+    del.textContent = '×';
+    del.title     = 'Delete alliance';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!confirm(`Delete "${a.name}"?`)) return;
+      // Unassign all features owned by this alliance
+      allFeatures.forEach(f => { if (f.alliance === ai) f.alliance = null; });
+      // Shift indices for alliances above the deleted one
+      allFeatures.forEach(f => { if (f.alliance !== null && f.alliance > ai) f.alliance--; });
+      alliances.splice(ai, 1);
+      selA = Math.max(0, Math.min(selA, alliances.length - 1));
+      save(); renderSidebar(); renderTable(); render();
+    });
+
+    const tog = document.createElement('span');
+    tog.className = 'a-toggle' + (hiddenAlliances.has(ai) ? ' hidden' : '');
+    tog.textContent = '👁';
+    tog.title = 'Toggle alliance visibility on map';
+    tog.addEventListener('click', e => {
+      e.stopPropagation();
+      if (hiddenAlliances.has(ai)) hiddenAlliances.delete(ai);
+      else hiddenAlliances.add(ai);
+      render();
+      renderAllianceList();
+    });
+    hdr.append(sw, bsw, tog, inp, del);
+    card.appendChild(hdr);
+
+    // ── Outpost count bar ──
+    const countRow = document.createElement('div');
+    countRow.className = 'op-count-row';
+    const num     = document.createElement('span');
+    num.className = 'op-count-num';
+    num.style.color = a.hex;
+    num.textContent = stats.total;
+    const barWrap = document.createElement('div');
+    barWrap.className = 'op-count-bar-wrap';
+    const bar     = document.createElement('div');
+    bar.className = 'op-count-bar';
+    bar.style.background = a.hex;
+    bar.style.width = (TOTAL_OUTPOSTS > 0 ? (stats.total / TOTAL_OUTPOSTS * 100) : 0) + '%';
+    barWrap.appendChild(bar);
+    const lbl     = document.createElement('span');
+    lbl.textContent = '/ ' + TOTAL_OUTPOSTS + ' outposts';
+    countRow.append(num, barWrap, lbl);
+    card.appendChild(countRow);
+
+    // ── Type coverage chips — only show MISSING combos ──
+    // Chips disappear once all instances of that type+level are owned.
+    const missSec  = document.createElement('div');
+    missSec.className = 'missing-section';
+    const missTitle = document.createElement('div');
+    missTitle.className = 'missing-title';
+    missTitle.textContent = 'Missing coverage';
+    const missGrid = document.createElement('div');
+    missGrid.className = 'missing-grid';
+
+    // Only render chips for combos the alliance is MISSING entirely
+    if (stats.missingLevels.length === 0) {
+      // All covered — show a green tick
+      const full = document.createElement('span');
+      full.style.cssText = 'font-size:10px;color:var(--green);font-family:"IBM Plex Mono",monospace;';
+      full.textContent = '✓ Full coverage';
+      missGrid.appendChild(full);
+    } else {
+      stats.missingLevels.forEach(({ k, lv }) => {
+        const t    = TYPES[k];
+        const chip = document.createElement('span');
+        chip.className = 'type-chip missing';
+        chip.style.background = t.color + '22';
+        chip.style.border     = `1px solid ${t.color}`;
+        chip.style.color      = t.color;
+        const dot  = document.createElement('span');
+        dot.className = 'chip-dot';
+        dot.style.background = t.color;
+        // Label: e.g. "Ar Lv2" or "Arm Lv4"
+        chip.append(dot, `${t.short} Lv${lv}`);
+        missGrid.appendChild(chip);
+      });
+    }
+    missSec.append(missTitle, missGrid);
+    card.appendChild(missSec);
+
+    // ── Breakdown by type + level ──
+    if (stats.total > 0) {
+      const bkSec   = document.createElement('div');
+      bkSec.className = 'breakdown-section';
+      const bkTitle = document.createElement('div');
+      bkTitle.className = 'breakdown-title';
+      bkTitle.textContent = 'Owned by type & level';
+      bkSec.appendChild(bkTitle);
+
+      stats.allTypeLvs.forEach(({ k, lv }) => {
+        const key   = k + ':' + lv;
+        const count = stats.byTypeLv[key] || 0;
+        if (!count) return;   // skip lines with nothing owned
+
+        const t     = TYPES[k];
+        const total = stats.totalPerTypeLv[key] || 1; // avoid div/0
+        const row   = document.createElement('div');
+        row.className = 'breakdown-row';
+
+        const dot = document.createElement('span');
+        dot.className = 'br-dot';
+        dot.style.background = t.color;
+
+        const nm  = document.createElement('span');
+        nm.className = 'br-name';
+        nm.textContent = `${t.short} Lv${lv}`; // e.g. "Ar Lv2"
+
+        const vl  = document.createElement('span');
+        vl.className = 'br-val';
+        vl.textContent = `${count}/${total}`; // e.g. "2/3"
+
+        const bw  = document.createElement('div');
+        bw.className = 'br-bar-wrap';
+        const b   = document.createElement('div');
+        b.className = 'br-bar';
+        b.style.background = t.color;
+        b.style.width      = Math.min(100, count / total * 100) + '%';
+        bw.appendChild(b);
+
+        row.append(dot, nm, vl, bw);
+        bkSec.appendChild(row);
+      });
+      card.appendChild(bkSec);
+    }
+
+    list.appendChild(card);
+  });
+}
+
+/**
+ * Render the global stats panel (total claimed, alliance count).
+ */
+function renderStats() {
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = '';
+
+  const totalClaimed = allFeatures.filter(f => f.cat === 'outpost' && f.alliance !== null).length;
+
+  const items = [
+    { val: totalClaimed,       lbl: 'Outposts claimed' },
+    { val: TOTAL_OUTPOSTS,     lbl: 'Total outposts'   },
+    { val: alliances.length,   lbl: 'Alliances'        },
+    { val: allFeatures.filter(f => f.cat === 'fortress' && f.alliance !== null).length, lbl: 'Forts held' },
+  ];
+
+  items.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    const val = document.createElement('div');
+    val.className = 'stat-val';
+    val.textContent = it.val;
+    const lbl = document.createElement('div');
+    lbl.className = 'stat-lbl';
+    lbl.textContent = it.lbl;
+    card.append(val, lbl);
+    grid.appendChild(card);
+  });
+}
+
+/**
+ * Render the filter-by-type toggle buttons (sidebar map filter).
+ */
+function renderFilters() {
+  const wrap = document.getElementById('filterBtns');
+  if (wrap.children.length > 0) return; // only build once — they're stable
+
+  [
+    { key: 'outpost',   label: 'Outposts'   },
+    { key: 'sanctuary', label: 'Sanctuaries'},
+    { key: 'fortress',  label: 'Fortresses' },
+  ].forEach(({ key, label }) => {
+    const btn = document.createElement('button');
+    btn.className = 'fbtn' + (activeFilters.has(key) ? ' on' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', () => {
+      if (activeFilters.has(key)) activeFilters.delete(key);
+      else activeFilters.add(key);
+      btn.classList.toggle('on');
+      render();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+/**
+ * Render the outpost type filter buttons for the table.
+ */
+function renderTableFilters() {
+  const wrap = document.getElementById('tableTypeFilters');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Outpost type filters
+  OUTPOST_TYPE_KEYS.forEach(k => {
+    const t = TYPES[k];
+    const btn = document.createElement('button');
+    btn.className = 'table-type-btn' + (activeTableTypes.has(k) ? ' on' : ' off');
+    const dot = document.createElement('span');
+    dot.className = 'tbl-dot';
+    dot.style.background = t.color;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(t.short));
+    btn.title = t.name;
+    btn.addEventListener('click', () => {
+      if (activeTableTypes.has(k)) activeTableTypes.delete(k);
+      else activeTableTypes.add(k);
+      btn.classList.toggle('on');
+      btn.classList.toggle('off');
+      renderTable();
+      render();
+      save();
+    });
+    wrap.appendChild(btn);
+  });
+
+  // Separator
+  const sep = document.createElement('span');
+  sep.style.cssText = 'display:inline-block;width:1px;height:16px;background:var(--border);margin:0 4px;vertical-align:middle';
+  wrap.appendChild(sep);
+
+  // Sanctuary filter
+  const sBtn = document.createElement('button');
+  sBtn.className = 'table-type-btn' + (activeTableTypes.has('sanctuary') ? ' on' : ' off');
+  const sDot = document.createElement('span');
+  sDot.className = 'tbl-dot';
+  sDot.style.background = '#58a6ff';
+  sBtn.appendChild(sDot);
+  sBtn.appendChild(document.createTextNode('Sanct.'));
+  sBtn.title = 'Sanctuary';
+  sBtn.addEventListener('click', () => {
+    if (activeTableTypes.has('sanctuary')) activeTableTypes.delete('sanctuary');
+    else activeTableTypes.add('sanctuary');
+    sBtn.classList.toggle('on');
+    sBtn.classList.toggle('off');
+    renderTable();
+    render();
+    save();
+  });
+  wrap.appendChild(sBtn);
+
+  // Fortress filter
+  const fBtn = document.createElement('button');
+  fBtn.className = 'table-type-btn' + (activeTableTypes.has('fortress') ? ' on' : ' off');
+  const fDot = document.createElement('span');
+  fDot.className = 'tbl-dot';
+  fDot.style.background = '#bc8cff';
+  fBtn.appendChild(fDot);
+  fBtn.appendChild(document.createTextNode('Fort.'));
+  fBtn.title = 'Fortress';
+  fBtn.addEventListener('click', () => {
+    if (activeTableTypes.has('fortress')) activeTableTypes.delete('fortress');
+    else activeTableTypes.add('fortress');
+    fBtn.classList.toggle('on');
+    fBtn.classList.toggle('off');
+    renderTable();
+    render();
+    save();
+  });
+  wrap.appendChild(fBtn);
+}
+
+/**
+ * Render the legend section with a colour swatch per outpost type.
+ */
+function renderLegend() {
+  const grid = document.getElementById('legendGrid');
+  if (grid.children.length > 0) return; // only build once
+
+  OUTPOST_TYPE_KEYS.forEach(k => {
+    const t   = TYPES[k];
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    const dot = document.createElement('span');
+    dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;background:${t.color};flex-shrink:0`;
+    const nm  = document.createElement('span');
+    nm.textContent = t.name;
+    row.append(dot, nm);
+    grid.appendChild(row);
+  });
+
+  // Special markers
+  [
+    { sym: '◆', color: '#e8c84a', name: 'Sanctuary' },
+    { sym: '⬠', color: '#58a6ff', name: 'Fortress'  },
+    { sym: '♛', color: '#e8c84a', name: "King's Castle" },
+  ].forEach(({ sym, color, name }) => {
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    const ic  = document.createElement('span');
+    ic.style.cssText = `font-size:12px;color:${color};width:14px;text-align:center;flex-shrink:0`;
+    ic.textContent = sym;
+    const nm  = document.createElement('span');
+    nm.textContent = name;
+    row.append(ic, nm);
+    grid.appendChild(row);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: TABLE
+   List view of all features with search / highlight sync.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Build or rebuild the table body from allFeatures + current search.
+ */
+function renderTable() {
+  const body = document.getElementById('tableBody');
+  if (!body) return;
+  body.innerHTML = '';
+
+  const q       = searchQ.toLowerCase();
+  const visible = allFeatures.filter(f => {
+    if (!activeTableTypes.has(f.k)) return false;
+    if (!q) return true;
+    const name = (f.n || f.k).toLowerCase();
+    const owner = f.alliance !== null ? (alliances[f.alliance]?.name || '').toLowerCase() : '';
+    return name.includes(q) || owner.includes(q) || (TYPES[f.k]?.name || '').toLowerCase().includes(q);
+  });
+
+  visible.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'trow' + (f.id === highlightId ? ' highlighted' : '');
+
+    // Column 1: name + coordinates
+    const nameCol = document.createElement('div');
+    const nm      = document.createElement('div');
+    nm.className  = 'trow-name';
+    nm.textContent = f.n || (TYPES[f.k]?.name + (f.lv ? ' Lv.'+f.lv : ''));
+    const coord   = document.createElement('div');
+    coord.className = 'trow-coord';
+    coord.textContent = f.x + ', ' + f.y;
+    nameCol.append(nm, coord);
+
+    // Column 2: owner with colour dot
+    const ownerCol = document.createElement('div');
+    ownerCol.className = 'trow-owner';
+    if (f.alliance !== null) {
+      const dot  = document.createElement('span');
+      dot.className = 'owner-dot';
+      dot.style.background = alliances[f.alliance]?.hex || '#888';
+      const oNm  = document.createElement('span');
+      oNm.className = 'trow-name';
+      oNm.style.fontSize = '10px';
+      oNm.textContent = alliances[f.alliance]?.name || '?';
+      ownerCol.append(dot, oNm);
+    } else {
+      ownerCol.textContent = '—';
+      ownerCol.style.color = 'var(--text3)';
+      ownerCol.style.fontSize = '10px';
+    }
+
+    // Column 3: type badge
+    const badge   = document.createElement('div');
+    const t       = TYPES[f.k];
+    if (t) {
+      const sp    = document.createElement('span');
+      sp.className = 'trow-badge';
+      sp.textContent = t.short;
+      sp.style.background = t.color + '22';
+      sp.style.color      = t.color;
+      badge.appendChild(sp);
+    }
+
+    row.append(nameCol, ownerCol, badge);
+
+    // Clicking a row highlights on map and scrolls/pans to it
+    row.addEventListener('click', () => {
+      highlightId = (highlightId === f.id ? null : f.id);
+      // Pan map to show the feature
+      const { sx, sy } = gameToIso(f.x, f.y);
+      panX += CW / 2 - sx;
+      panY += CH / 2 - sy;
+      renderTable();
+      render();
+    });
+
+    body.appendChild(row);
+  });
+}
+
+/** Wire up the search input to filter the table. */
+function initSearch() {
+  const inp = document.getElementById('searchInp');
+  if (!inp) return;
+  inp.addEventListener('input', e => {
+    searchQ = e.target.value;
+    renderTable();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: VIEW_MODES
+   Switch between Map / Map+Table / Table-only views.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Apply a new view mode to layout, show/hide panes as needed.
+ * @param {'map'|'alliance'|'split'|'table'} mode
+ * @param {boolean} [skipSave] - true during init to avoid premature save
+ */
+function setViewMode(mode, skipSave) {
+  viewMode = mode;
+  const mapPane   = document.getElementById('mapPane');
+  const tablePane = document.getElementById('tablePane');
+  const sidebar   = document.querySelector('.sidebar');
+  const layout    = document.querySelector('.layout');
+
+  // Show/hide sidebar and panes per mode
+  switch (mode) {
+    case 'map':
+      sidebar.style.display = 'none';
+      mapPane.style.display  = '';
+      tablePane.style.display = 'none';
+      layout.style.gridTemplateColumns = '1fr';
+      break;
+    case 'alliance':
+      sidebar.style.display = '';
+      mapPane.style.display  = '';
+      tablePane.style.display = 'none';
+      layout.style.gridTemplateColumns = '280px 1fr';
+      break;
+    case 'split':
+      sidebar.style.display = 'none';
+      mapPane.style.display  = '';
+      tablePane.style.display = '';
+      layout.style.gridTemplateColumns = '1fr';
+      break;
+    case 'table':
+      sidebar.style.display = 'none';
+      mapPane.style.display  = 'none';
+      tablePane.style.display = '';
+      layout.style.gridTemplateColumns = '1fr';
+      break;
+  }
+
+  if (!skipSave) save();
+
+  // Update toolbar button states
+  ['viewMap','viewAlliance','viewSplit','viewTable'].forEach(id => {
+    document.getElementById(id).classList.remove('on');
+  });
+  const activeId = mode === 'map' ? 'viewMap'
+                 : mode === 'alliance' ? 'viewAlliance'
+                 : mode === 'split' ? 'viewSplit'
+                 : 'viewTable';
+  document.getElementById(activeId).classList.add('on');
+
+  render(); // re-render canvas (size may have changed)
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: STORAGE
+   Persist alliances and ownership to window.storage (or localStorage).
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Save current state (alliances + ownership map) to storage.
+ */
+async function save() {
+  try {
+    const data = {
+      alliances,
+      ownership: allFeatures.reduce((acc, f) => {
+        if (f.alliance !== null) acc[f.id] = f.alliance;
+        return acc;
+      }, {}),
+      hidden: [...hiddenAlliances],
+      tableTypes: [...activeTableTypes],
+      viewMode, zoom, panX, panY,
+      lastChangeTimestamp
+    };
+    const json = JSON.stringify(data);
+
+    // Prefer window.storage (OpenClaw plugin API), fall back to localStorage
+    if (window.storage?.set) {
+      await window.storage.set(STORAGE_KEY, json, false);
+    } else {
+      localStorage.setItem(STORAGE_KEY, json);
+    }
+
+    // Flash the "Saved" badge
+    const badge = document.getElementById('savedBadge');
+    badge.classList.add('show');
+    setTimeout(() => badge.classList.remove('show'), 2000);
+  } catch (e) {
+    console.warn('Save failed:', e);
+  }
+}
+
+/**
+ * Load saved state from storage and hydrate alliances + feature ownership.
+ * Falls back to v2 key for migration from older versions.
+ */
+async function load() {
+  try {
+    let raw = null;
+
+    if (window.storage?.get) {
+      // Try current key first, then previous version for migration
+      const r3 = await window.storage.get(STORAGE_KEY, false).catch(() => null);
+      const r2 = !r3 ? await window.storage.get('kingshot_1363_v2', false).catch(() => null) : null;
+      raw = (r3 || r2)?.value;
+    } else {
+      raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('kingshot_1363_v2');
+    }
+
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.alliances?.length) alliances = data.alliances;
+      if (data.ownership) {
+        allFeatures.forEach(f => {
+          if (data.ownership[f.id] !== undefined) f.alliance = data.ownership[f.id];
+        });
+      }
+      if (data.hidden?.length) data.hidden.forEach(i => hiddenAlliances.add(i));
+      if (data.tableTypes?.length) activeTableTypes = new Set(data.tableTypes);
+      if (data.viewMode) viewMode = data.viewMode;
+      if (typeof data.zoom === 'number') zoom = data.zoom;
+      if (typeof data.panX === 'number') panX = data.panX;
+      if (typeof data.panY === 'number') panY = data.panY;
+      if (data.lastChangeTimestamp) {
+        lastChangeTimestamp = data.lastChangeTimestamp;
+        updateLastChangeLabel();
+      }
+    }
+  } catch (e) {
+    console.warn('Load failed:', e);
+  }
+
+  // Seed with a default alliance if none loaded
+  if (!alliances.length) {
+    alliances = [{ name: 'Alliance 1', hex: ALLIANCE_COLORS[0], border: ALLIANCE_BORDER_COLORS[0] }];
+  }
+  // Back-fill border for alliances saved before this feature existed
+  alliances.forEach((a, i) => {
+    if (!a.border) a.border = ALLIANCE_BORDER_COLORS[i % ALLIANCE_BORDER_COLORS.length];
+  });
+
+  // Clamp hidden alliance indices to valid range (in case alliances were deleted)
+  hiddenAlliances = new Set([...hiddenAlliances].filter(i => i >= 0 && i < alliances.length));
+
+  // ── Last change timestamp helper ──
+  function updateLastChangeLabel() {
+    const el = document.getElementById('lastChange');
+    if (!el) return;
+    if (lastChangeTimestamp) {
+      const d = new Date(lastChangeTimestamp);
+      const pad = n => String(n).padStart(2, '0');
+      el.textContent = `Last change: ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    } else {
+      el.textContent = '';
+    }
+  }
+  updateLastChangeLabel();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE: INIT
+   Bootstrap — load data, wire events, initial render.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Main entry point. Called once on DOMContentLoaded.
+ * Loads persisted state, wires all event listeners, and renders.
+ */
+async function init() {
+  await load();
+
+  // ── Canvas resize observer ──
+  const canvas = document.getElementById('mc');
+  const ro = new ResizeObserver(() => render());
+  ro.observe(canvas);
+
+  // ── Zoom / pan ──
+  initZoomPan();
+
+  // ── Tooltip ──
+  initTooltip();
+
+  // ── Context menu ──
+  initContextMenu();
+
+  // ── View mode buttons ──
+  document.getElementById('viewMap').addEventListener('click',      () => setViewMode('map'));
+  document.getElementById('viewAlliance').addEventListener('click', () => setViewMode('alliance'));
+  document.getElementById('viewSplit').addEventListener('click',    () => setViewMode('split'));
+  document.getElementById('viewTable').addEventListener('click',    () => setViewMode('table'));
+
+  // ── Add alliance ──
+  document.getElementById('addAllianceBtn').addEventListener('click', () => {
+    const idx    = alliances.length % ALLIANCE_COLORS.length;
+    const hex    = ALLIANCE_COLORS[idx];
+    const border = ALLIANCE_BORDER_COLORS[idx];
+    alliances.push({ name: 'Alliance ' + (alliances.length + 1), hex, border });
+    selA = alliances.length - 1;
+    save();
+    renderAllianceList();
+    render();
+  });
+
+  // ── Reset all ──
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('Reset ALL ownership data? This cannot be undone.')) return;
+    allFeatures.forEach(f => { f.alliance = null; });
+    hiddenAlliances.clear();
+    activeTableTypes = new Set(OUTPOST_TYPE_KEYS);
+    viewMode = 'map';
+    zoom = 1.0;
+    panX = 0;
+    panY = 0;
+    save();
+    setViewMode('map');
+    renderSidebar();
+    renderTableFilters();
+    renderTable();
+    updateZoomLabel();
+    render();
+  });
+
+  // ── Search ──
+  initSearch();
+
+  // Remove any leftover sidebar-hidden class that could block alliance view
+  document.querySelector('.layout').classList.remove('sidebar-hidden');
+
+  // Apply saved view mode before painting
+  setViewMode(viewMode, true);
+
+  // ── Initial UI paint ──
+    renderTableFilters();
+    renderSidebar();
+  renderTable();
+  updateZoomLabel();
+  render();
+}
+
+// Kick off when DOM is ready
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
